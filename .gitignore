@@ -1,0 +1,9 @@
+/.clj-kondo/.cache/
+/.clj-kondo/imports/
+/.cpcache/
+/.direnv/
+/.envrc
+/.lsp/
+/.portal/
+/data/
+/node_modules/
