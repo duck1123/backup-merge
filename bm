@@ -21,6 +21,12 @@
                 :type   :string}
                {:option "file-b"
                 :type   :string}]
-     :runs    bm/-main}]})
+     :runs    bm/-main}
+    {:command "merge-files"
+     :opts    [{:option "file-a"
+                :type   :string}
+               {:option "file-b"
+                :type   :string}]
+     :runs    bm/merge-files}]})
 
 (run-cmd *command-line-args* CONFIGURATION)

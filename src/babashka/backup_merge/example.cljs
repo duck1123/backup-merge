@@ -43,7 +43,8 @@
 (defn -main
   [& args]
   ;; (binding [*out* *err*] (println "main"))
-  (if (= (count args) 2)
+  (println "args: " args)
+  #_(if (= (count args) 2)
     (let [[af bf] args]
       (merge-files af bf))
     (println "Wrong number of args")))
