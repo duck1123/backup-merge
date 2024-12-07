@@ -1,4 +1,4 @@
-(ns example
+(ns backup-merge.example
   (:require
    [applied-science.js-interop :as j]
    [nbb.core :as nbb]

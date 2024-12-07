@@ -10,15 +10,17 @@
 (require '[backup-merge.core :as bm])
 
 (def CONFIGURATION
-  {:app {:command "bm"
-         :description "Backup merges"
-         :version "0.0.1"}
+  {:app         {:command     "bm"
+                 :description "Backup merges"
+                 :version     "0.0.1"}
    :global-opts []
    :commands
    [{:command "build"
-     :short "b"
-     :runs bm/-main}]
-   })
-
+     :short   "b"
+     :opts    [{:option "file-a"
+                :type   :string}
+               {:option "file-b"
+                :type   :string}]
+     :runs    bm/-main}]})
 
 (run-cmd *command-line-args* CONFIGURATION)
