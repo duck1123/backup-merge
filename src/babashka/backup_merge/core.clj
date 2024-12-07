@@ -25,10 +25,15 @@
     (prn {:file-a file-a
           :file-b file-b})))
 
+(defn convert-command
+  [& [args]]
+  (println args))
+
 (def CONFIGURATION
-  {:app         {:command     "bm"
-                 :description "Backup merges"
-                 :version     "0.0.1"}
+  {:app
+   {:command     "bm"
+    :description "Backup merges"
+    :version     "0.0.1"}
    :global-opts []
    :commands
    [{:command "build"
@@ -38,6 +43,10 @@
                {:option "file-b"
                 :type   :string}]
      :runs    -main}
+    {:command "convert"
+     :opts    [{:option "in"
+                :type   :string}]
+     :runs    convert-command}
     {:command "merge-files"
      :opts    [{:option "file-a"
                 :type   :string}
