@@ -9,8 +9,12 @@
   (let [{:keys [file-a file-b]} args
         args   ["npx nbb"
                 "-cp src"
-                "-m backup-merge.example"
-                file-a file-b]]
+                "-x backup-merge.example/merge-files-command"
+                #_"--"
+                "--file-a"
+                file-a
+                "--file-b"
+                file-b]]
     (:exit (shell (str/join " " args)))))
 
 (defn -main
@@ -20,3 +24,23 @@
     (prn args)
     (prn {:file-a file-a
           :file-b file-b})))
+
+(def CONFIGURATION
+  {:app         {:command     "bm"
+                 :description "Backup merges"
+                 :version     "0.0.1"}
+   :global-opts []
+   :commands
+   [{:command "build"
+     :short   "b"
+     :opts    [{:option "file-a"
+                :type   :string}
+               {:option "file-b"
+                :type   :string}]
+     :runs    -main}
+    {:command "merge-files"
+     :opts    [{:option "file-a"
+                :type   :string}
+               {:option "file-b"
+                :type   :string}]
+     :runs    merge-files}]})

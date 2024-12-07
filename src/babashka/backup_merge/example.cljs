@@ -31,6 +31,7 @@
 
 (defn merge-files
   [af bf]
+  (println "Merge files a: " af ", b: " bf)
   (p/let [a  (read-backup af)
           b  (read-backup bf)
           ao (map-events a)
@@ -39,6 +40,13 @@
           oa (vals co)
           o  (sort-by #(j/get % :created_at) < oa)]
     (print-lines o)))
+
+(defn merge-files-command
+  [& [args]]
+  (println "args" args)
+  (let [{:keys [file-a file-b]} args]
+    (merge-files file-a file-b)
+    0))
 
 (defn -main
   [& args]

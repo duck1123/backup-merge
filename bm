@@ -4,29 +4,9 @@
 (require '[babashka.deps :as deps])
 
 (deps/add-deps
- '{:deps {io.github.l3nz/cli-matic      {:sha "ddbcad077ba63e0abb3597a7ec6f62c40f91c9e5"}}})
+ '{:deps {io.github.l3nz/cli-matic {:sha "ddbcad077ba63e0abb3597a7ec6f62c40f91c9e5"}}})
 
-(require '[cli-matic.core :as cli :refer [run-cmd]])
+(require '[cli-matic.core :as cli])
 (require '[backup-merge.core :as bm])
 
-(def CONFIGURATION
-  {:app         {:command     "bm"
-                 :description "Backup merges"
-                 :version     "0.0.1"}
-   :global-opts []
-   :commands
-   [{:command "build"
-     :short   "b"
-     :opts    [{:option "file-a"
-                :type   :string}
-               {:option "file-b"
-                :type   :string}]
-     :runs    bm/-main}
-    {:command "merge-files"
-     :opts    [{:option "file-a"
-                :type   :string}
-               {:option "file-b"
-                :type   :string}]
-     :runs    bm/merge-files}]})
-
-(run-cmd *command-line-args* CONFIGURATION)
+(cli/run-cmd *command-line-args* bm/CONFIGURATION)
