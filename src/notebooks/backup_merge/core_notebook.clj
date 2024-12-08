@@ -68,7 +68,10 @@ bm/node
 ^{::clerk/no-cache true}
 (mount/running-states)
 
-(v/with-viewer nu/nostr-event-viewer (first events))
+^{::clerk/visibility {:code :hide :result :show}}
+(clerk/html
+ [:div
+  (map #(v/with-viewer nu/nostr-event-viewer %) (take 5 events))])
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
