@@ -6,6 +6,7 @@ pkgs.mkShell {
     clojure
     gnumake
     postgresql
+    runme
     yarn
   ];
 }

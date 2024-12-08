@@ -7,6 +7,8 @@
    [taoensso.timbre :as log]
    [xtdb.node :as xtn]))
 
+;; [Notebook](../../notebooks/backup_merge/core_notebook.clj)
+
 (defstate node
   :start
   (do
@@ -40,7 +42,6 @@
      :bind "0.0.0.0"
      :handler (nrepl-handler))))
 
-
 (defn clerk-command
   [& [args]]
   (log/info "args" args)
@@ -48,7 +49,6 @@
   (loop []
     (Thread/sleep (* 3600 1000))
     (recur)))
-
 
 (defn -main
   [& args1]

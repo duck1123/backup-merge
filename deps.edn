@@ -1,4 +1,4 @@
-{:paths ["src/main"]
+{:paths ["src/main" "src/notebooks"]
 
  :deps
  {cheshire/cheshire                 {:mvn/version "5.13.0"}

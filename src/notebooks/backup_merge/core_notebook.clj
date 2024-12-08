@@ -14,6 +14,8 @@
 
 ;; # Backup Merge
 
+;; [Core](../../main/backup_merge/core.clj)
+
 {::clerk/visibility {:code :hide :result :hide}}
 
 (def data-path (fs/absolutize (fs/path "data")))
@@ -48,6 +50,8 @@ bm/node
 (comment
   (mount/start)
   (mount/stop)
+
+  (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
 
   (mount/current-state (str #'bm/node))
   (mount/->DerefableState (str #'bm/node))
