@@ -31,7 +31,7 @@
 
 (defn merge-files
   [af bf]
-  (println "Merge files a: " af ", b: " bf)
+  #_(println "Merge files a: " af ", b: " bf)
   (p/let [a  (read-backup af)
           b  (read-backup bf)
           ao (map-events a)
@@ -43,10 +43,17 @@
 
 (defn merge-files-command
   [& [args]]
-  (println "args" args)
+  #_(println "args" args)
   (let [{:keys [file-a file-b]} args]
     (merge-files file-a file-b)
     0))
+
+(defn convert-command
+  [& [args]]
+  #_(println "args" args)
+  (let [{:keys [in]} args]
+    (p/let [lines (read-backup in)]
+      (print-lines lines))))
 
 (defn -main
   [& args]

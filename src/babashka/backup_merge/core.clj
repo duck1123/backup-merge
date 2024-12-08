@@ -5,12 +5,14 @@
 
 (defn execute-nbb
   [f args]
-  (let [cli-args (apply concat
+  (let [cli-args (apply conj
                         ["npx nbb"
                          "-cp src"
                          (str "-x " f)]
-                        (map (fn [[k v]] (str (name k) " " v)) args))]
-    (:exit (shell (str/join " " cli-args)))))
+                        (map (fn [[k v]] (str "--" (name k) " " v)) args))
+        cmd      (str/join " " cli-args)]
+    #_(println cmd)
+    (:exit (shell cmd))))
 
 (defn merge-files
   [& [args]]
@@ -28,7 +30,7 @@
 
 (defn convert-command
   [& [args]]
-  (println args)
+  #_(println args)
   (let [in (first (:_arguments args))]
     (execute-nbb "backup-merge.example/convert-command" {:in in})))
 
