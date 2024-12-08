@@ -18,6 +18,9 @@
 
 ;; [Core](../../main/backup_merge/core.clj)
 
+^{::clerk/sync true}
+(defonce !counter (atom 0))
+
 {::clerk/visibility {:code :hide :result :hide}}
 
 (def data-path (fs/absolutize (fs/path "data")))
@@ -69,9 +72,31 @@ bm/node
 (mount/running-states)
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/html
- [:div
-  (map #(v/with-viewer nu/nostr-event-viewer %) (take 5 events))])
+(clerk/with-viewer
+  {:render-fn
+   '(fn []
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !counter inc)}
+       "↑"])}
+  {})
+
+^{::clerk/visibility {:code :hide :result :show}}
+(clerk/with-viewer
+  {:render-fn
+   '(fn []
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !counter dec)}
+       "↓"])}
+  {})
+
+^{::clerk/visibility {:code :hide :result :show}}
+(let [event-count @!counter]
+  (clerk/html
+   [:div
+    [:p "Showing " @!counter  " events"]
+    [:div
+     (map #(v/with-viewer nu/nostr-event-viewer %)
+          (take event-count events))]]))
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
