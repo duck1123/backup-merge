@@ -9,14 +9,16 @@
 
 ;; [Notebook](../../notebooks/backup_merge/core_notebook.clj)
 
-(defstate node
+(defstate ^{:on-reload :noop} node
   :start
   (do
     (log/info "starting")
     (xtn/start-node))
   :stop
   (do
-    (log/info "stopping")))
+    (log/info "stopping")
+    (let [{:keys [close-fn]} node]
+      (close-fn))))
 
 (defn db-started?
   []

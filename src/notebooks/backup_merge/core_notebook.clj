@@ -4,11 +4,13 @@
   (:require
    [babashka.fs :as fs]
    [backup-merge.core :as bm]
-   ;; [cheshire.core :as json]
-   ;; [clojure.java.io :as io]
+   [backup-merge.notebook-utils :as nu]
+   [cheshire.core :as json]
+   [clojure.java.io :as io]
    [mount.core :as mount]
    [next.jdbc :as jdbc]
    [nextjournal.clerk :as clerk]
+   [nextjournal.clerk.viewer :as v]
    ;; [xtdb.client :as xtc]
    [xtdb.api :as xt]))
 
@@ -31,6 +33,25 @@
    :host "localhost"
    :port 5432})
 
+(defn parse-file
+  [file-name]
+  (let [reader (io/reader file-name)
+        events (json/parsed-seq reader)]
+    events))
+
+(defn merge-jsonl
+  [& [args]]
+  (doseq [in (:_arguments args)]
+    (let [reader (io/reader in)
+          events (json/parsed-seq reader)]
+      (println (str "|" in "|" (count events) "|"))
+      #_(doseq [v (take 5 events)]
+          (println (get v "id"))))))
+
+(def first-backup (str (first backup-files)))
+
+(def events (parse-file first-backup))
+
 {::clerk/visibility {:code :show :result :show}}
 
 ^{::clerk/visibility {:code :hide :result :show}}
@@ -47,6 +68,9 @@ bm/node
 ^{::clerk/no-cache true}
 (mount/running-states)
 
+(v/with-viewer nu/nostr-event-viewer (first events))
+
+^{::clerk/visibility {:code :hide :result :hide}}
 (comment
   (mount/start)
   (mount/stop)

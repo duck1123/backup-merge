@@ -5,6 +5,19 @@
    [clojure.java.io :as io]
    [clojure.string :as str]))
 
+(def default-clerk-port 7777)
+(def default-nrepl-port 7000)
+
+(defn execute-clojure
+  [f args]
+  (let [base-args ["clojure"
+                   (str "-X " f)]
+        arg-args  (map (fn [[k v]] (str "--" (name k) " " v)) args)
+        cli-args  (apply conj base-args arg-args)
+        cmd       (str/join " " cli-args)]
+    #_(println cmd)
+    (:exit (shell cmd))))
+
 (defn execute-nbb
   [f args]
   (let [src-path "src/nbb"
@@ -44,11 +57,10 @@
           (println (get v "id"))))))
 
 (defn start-clerk
-  [args]
-  (println args)
-  (let [f          "backup-merge.core/clerk-command"
-        clerk-port 7000]
-    (shell (str  "clojure -X " f " --clerk-port " clerk-port))))
+  [{:keys [clerk-port nrepl-port]}]
+  (let [f    "backup-merge.core/clerk-command"
+        opts {:clerk-port clerk-port :nrepl-port nrepl-port}]
+    (execute-clojure f opts)))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (def CONFIGURATION
@@ -58,18 +70,29 @@
     :version     "0.0.1"}
    :global-opts []
    :commands
-   [{:command "build"
-     :short   "b"
-     :opts    [{:option "file-a"
-                :type   :string}
-               {:option "file-b"
-                :type   :string}]
-     :runs    -main}
+   [{:command     "build"
+     :short       "b"
+     :description "Not used"
+     :opts        [{:option "file-a"
+                    :type   :string}
+                   {:option "file-b"
+                    :type   :string}]
+     :runs        -main}
     {:command     "clerk"
      :description "notebooks"
-     :subcommands [{:command     "start"
-                    :description "Start the server"
-                    :runs        start-clerk}]}
+     :subcommands
+     [{:command     "start"
+       :description "Start the server"
+       :opts
+       [{:option      "clerk-port"
+         :description "Port to serve clerk notebooks on"
+         :type        :int
+         :default     default-clerk-port}
+        {:option      "nrepl-port"
+         :description "Port to serve nRepl server on"
+         :type        :int
+         :default     default-nrepl-port}]
+       :runs        start-clerk}]}
     {:command     "convert"
      :short       "c"
      :description "Convert backup js to jsonl"
