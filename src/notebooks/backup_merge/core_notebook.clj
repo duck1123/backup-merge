@@ -18,7 +18,7 @@
 {::clerk/visibility {:code :hide :result :hide}}
 
 ^{::clerk/sync true}
-(defonce !counter (atom 0))
+(defonce !counter (atom 1))
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (def backup-files (fs/list-dir bm/data-path))
@@ -36,31 +36,34 @@
 
 (def events (bm/parse-file first-backup))
 
+(def trimmed-files
+  (map str (take (:backup-file-lines @!state 5) backup-files)))
+
+(def backup-file-button-viewer
+  {:render-fn
+   '(fn [p] [:button {:on-click #(swap! !state assoc :target-file p)} (str "foo" p)])})
+
+(comment
+
+  ^{::clerk/no-cache true}
+  (when (bm/db-started?)
+    (xt/status bm/node))
+
+  ^{::clerk/no-cache true}
+  (mount/running-states)
+
+  #_|)
+
 {::clerk/visibility {:code :show :result :show}}
 
-@!state
+^{::clerk/visibility {:code :hide :result :show}}
+(->> (for [p trimmed-files]
+       [:li {} (clerk/with-viewer backup-file-button-viewer p)])
+     (apply vector :ul)
+     clerk/html)
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/html
- [:ul
-  (map
-   (fn [p]
-     [:li {}
-      [:a {#_#_
-           :on-click (fn [x] (println x))}
-       (str p)]])
-   (take  5  #_(:backup-file-lines @!state 5)
-         backup-files))])
-
-^{::clerk/no-cache true}
-bm/node
-
-^{::clerk/no-cache true}
-(when (bm/db-started?)
-  (xt/status bm/node))
-
-^{::clerk/no-cache true}
-(mount/running-states)
+(clerk/code @!state)
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (clerk/with-viewer
