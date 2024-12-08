@@ -63,33 +63,28 @@
    '(fn []
       [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
        {:on-click #(swap! !state update-in [:xtdb :expected] not)}
-       (str "Started: " (get-in !state [:xtdb :expected]))])})
+       (if (get-in @!state [:xtdb :expected])
+         "stop" "start")])})
 
 (defn state-monitor
   []
   (log/info "Running state monitor" @!state)
-  (when (get-in @!state [:xtdb :expected])
-    (when-not (bm/db-started?)
-      (mount/start)
-      (swap! !state assoc-in [:xtdb :actual] true))))
+  (let [{{:keys [expected actual]} :xtdb} @!state]
+    (when (not= expected actual)
+      (if expected
+        (if (bm/db-started?)
+          (log/info "Already started")
+          (mount/start))
+        (if (bm/db-started?)
+          (mount/stop)
+          (log/info "Already stopped")))
+      (swap! !state assoc-in [:xtdb :actual] expected))))
 
-(comment
-
-  ^{::clerk/no-cache true}
-  (when (bm/db-started?)
-    (xt/status bm/node))
-
-  ^{::clerk/no-cache true}
-  (mount/running-states)
-
-  #_|)
 
 ^{:clerk/no-cache true}
 (state-monitor)
 
 {::clerk/visibility {:code :show :result :show}}
-
-(clerk/with-viewer toggle-xtdb-state {})
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (->> (for [p trimmed-files]
@@ -99,6 +94,16 @@
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (clerk/code @!state)
+
+^{::clerk/visibility {:code :hide :result :show}}
+(clerk/with-viewer toggle-xtdb-state {:state !state})
+
+ ^{::clerk/no-cache true}
+(when (bm/db-started?)
+  (xt/status bm/node))
+
+^{::clerk/no-cache true}
+(mount/running-states)
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (clerk/with-viewer increase-file-counter-viewer {})
