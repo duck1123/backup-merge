@@ -9,16 +9,14 @@
    [next.jdbc :as jdbc]
    [nextjournal.clerk :as clerk]
    [nextjournal.clerk.viewer :as v]
-   [xtdb.api :as xt]))
+   [xtdb.api :as xt]
+   [taoensso.timbre :as log]))
 
 ;; # Backup Merge
 
 ;; [Core](../../main/backup_merge/core.clj)
 
 {::clerk/visibility {:code :hide :result :hide}}
-
-^{::clerk/sync true}
-(defonce !counter (atom 1))
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (def backup-files (fs/list-dir bm/data-path))
@@ -27,7 +25,10 @@
 (defonce !state
   (atom
    {:backup-file-lines 5
-    :target-file (str (first backup-files))}))
+    :event-count       1
+    :target-file       (str (first backup-files))
+    :xtdb              {:expected false
+                        :actual   (bm/db-started?)}}))
 
 (def first-backup
   (or
@@ -41,7 +42,36 @@
 
 (def backup-file-button-viewer
   {:render-fn
-   '(fn [p] [:button {:on-click #(swap! !state assoc :target-file p)} (str "foo" p)])})
+   '(fn [p] [:button {:on-click #(swap! !state assoc :target-file p)} p])})
+
+(def increase-file-counter-viewer
+  {:render-fn
+   '(fn []
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !state update-in [:event-count] inc)}
+       "↑"])})
+
+(def decrease-file-counter-viewer
+  {:render-fn
+   '(fn []
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !state update-in [:event-count] dec)}
+       "↓"])})
+
+(def toggle-xtdb-state
+  {:render-fn
+   '(fn []
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !state update-in [:xtdb :expected] not)}
+       (str "Started: " (get-in !state [:xtdb :expected]))])})
+
+(defn state-monitor
+  []
+  (log/info "Running state monitor" @!state)
+  (when (get-in @!state [:xtdb :expected])
+    (when-not (bm/db-started?)
+      (mount/start)
+      (swap! !state assoc-in [:xtdb :actual] true))))
 
 (comment
 
@@ -54,7 +84,12 @@
 
   #_|)
 
+^{:clerk/no-cache true}
+(state-monitor)
+
 {::clerk/visibility {:code :show :result :show}}
+
+(clerk/with-viewer toggle-xtdb-state {})
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (->> (for [p trimmed-files]
@@ -66,49 +101,25 @@
 (clerk/code @!state)
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/with-viewer
-  {:render-fn
-   '(fn []
-      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
-       {:on-click #(swap! !counter inc)}
-       "↑"])}
-  {})
+(clerk/with-viewer increase-file-counter-viewer {})
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/with-viewer
-  {:render-fn
-   '(fn []
-      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
-       {:on-click #(swap! !counter dec)}
-       "↓"])}
-  {})
+(clerk/with-viewer decrease-file-counter-viewer {})
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(let [event-count @!counter]
+(let [event-count (:event-count @!state)]
   (clerk/html
    [:div
-    [:p "Showing " @!counter  " events"]
+    [:p "Showing " event-count  " events"]
     [:div
      (map #(v/with-viewer nu/nostr-event-viewer %)
           (take event-count events))]]))
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/with-viewer
-  {:render-fn
-   '(fn []
-      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
-       {:on-click #(swap! !counter inc)}
-       "↑"])}
-  {})
+(clerk/with-viewer increase-file-counter-viewer {})
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/with-viewer
-  {:render-fn
-   '(fn []
-      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
-       {:on-click #(swap! !counter dec)}
-       "↓"])}
-  {})
+(clerk/with-viewer decrease-file-counter-viewer {})
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
