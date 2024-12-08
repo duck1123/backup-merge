@@ -1,7 +1,11 @@
 (ns backup-merge.core
   (:require
    [babashka.process :refer [shell]]
-   [clojure.string :as str]))
+   [cheshire.core :as json]
+   [clojure.java.io :as io]
+   [clojure.string :as str])
+  (:import
+   (java.io PushbackReader)))
 
 (defn execute-nbb
   [f args]
@@ -34,6 +38,19 @@
   (let [in (first (:_arguments args))]
     (execute-nbb "backup-merge.example/convert-command" {:in in})))
 
+(defn merge-jsonl
+  [& [args]]
+  #_(println args)
+  (let [in (or (first (:_arguments args))
+               (:in args))]
+    (comment)
+    (let [reader (io/reader in)
+
+          #_(PushbackReader, in)]
+      (doseq [v (json/parsed-seq reader)]
+        (println #_"." (get v "id")))
+      #_(println "in" in))))
+
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (def CONFIGURATION
   {:app
@@ -49,14 +66,27 @@
                {:option "file-b"
                 :type   :string}]
      :runs    -main}
-    {:command "convert"
-     :opts    [{:option "in"
-                :short "0"
-                :type   :string}]
-     :runs    convert-command}
-    {:command "merge-files"
-     :opts    [{:option "file-a"
-                :type   :string}
-               {:option "file-b"
-                :type   :string}]
-     :runs    merge-files}]})
+    {:command     "convert"
+     :short       "c"
+     :description "Convert backup js to jsonl"
+     :opts        [{:option "in"
+                    :short  "0"
+                    :type   :string}]
+     :runs        convert-command}
+    {:command     "merge"
+     :short       "m"
+     :description "merge backup files"
+     :subcommands
+     [{:command     "js"
+       :description "merge js backup"
+       :opts        [{:option "file-a"
+                      :type   :string}
+                     {:option "file-b"
+                      :type   :string}]
+       :runs        merge-files}
+      {:command     "jsonl"
+       :description "merge jsonl backups"
+       :opts        [{:option "in"
+                      :short  "0"
+                      :type   :string}]
+       :runs        merge-jsonl}]}]})
