@@ -43,6 +43,13 @@
       #_(doseq [v (take 5 events)]
           (println (get v "id"))))))
 
+(defn start-clerk
+  [args]
+  (println args)
+  (let [f          "backup-merge.core/clerk-command"
+        clerk-port 7000]
+    (shell (str  "clojure -X " f " --clerk-port " clerk-port))))
+
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (def CONFIGURATION
   {:app
@@ -58,6 +65,11 @@
                {:option "file-b"
                 :type   :string}]
      :runs    -main}
+    {:command     "clerk"
+     :description "notebooks"
+     :subcommands [{:command     "start"
+                    :description "Start the server"
+                    :runs        start-clerk}]}
     {:command     "convert"
      :short       "c"
      :description "Convert backup js to jsonl"

@@ -2,6 +2,8 @@
 
 ## Start Clerk
 
+[Notebooks](http://localhost:7777/)
+
 ```sh {"name": "start-clerk"}
-clojure -X backup-merge.core/clerk-command --foo 7000
+./bm clerk start
 ```
