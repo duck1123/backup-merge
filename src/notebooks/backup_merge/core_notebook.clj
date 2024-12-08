@@ -38,6 +38,7 @@
 ^{::clerk/no-cache true}
 bm/node
 
+^{::clerk/no-cache true}
 (when (bm/db-started?)
   (xt/status bm/node))
 

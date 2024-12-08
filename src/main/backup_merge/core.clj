@@ -8,9 +8,13 @@
    [xtdb.node :as xtn]))
 
 (defstate node
-  :start (xtn/start-node)
-  :stop (fn [& args]
-          (log/info "stopping" args)))
+  :start
+  (do
+    (log/info "starting")
+    (xtn/start-node))
+  :stop
+  (do
+    (log/info "stopping")))
 
 (defn db-started?
   []
