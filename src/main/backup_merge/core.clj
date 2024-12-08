@@ -8,7 +8,13 @@
    [xtdb.node :as xtn]))
 
 (defstate node
-  :start (xtn/start-node))
+  :start (xtn/start-node)
+  :stop (fn [& args]
+          (log/info "stopping" args)))
+
+(defn db-started?
+  []
+  (.isRealized (mount/->DerefableState (str #'node))))
 
 (defn nrepl-handler []
   (require 'cider.nrepl)
