@@ -27,12 +27,12 @@
 (defonce !state
   (atom
    {:backup-file-lines 5
-    :target-file (first backup-files)}))
+    :target-file (str (first backup-files))}))
 
 (def first-backup
-  (str (or
-        (:target-file @!state)
-        (first backup-files))))
+  (or
+   (:target-file @!state)
+   (str (first backup-files))))
 
 (def events (bm/parse-file first-backup))
 
@@ -46,9 +46,10 @@
   (map
    (fn [p]
      [:li {}
-      [:a {:on-click (fn [x] (println x))}
+      [:a {#_#_
+           :on-click (fn [x] (println x))}
        (str p)]])
-   (take (:backup-file-lines @!state 5)
+   (take  5  #_(:backup-file-lines @!state 5)
          backup-files))])
 
 ^{::clerk/no-cache true}
