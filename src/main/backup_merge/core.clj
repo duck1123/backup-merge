@@ -1,5 +1,8 @@
 (ns backup-merge.core
   (:require
+   [babashka.fs :as fs]
+   [cheshire.core :as json]
+   [clojure.java.io :as io]
    [clojure.string :as str]
    [mount.core :as mount :refer [defstate]]
    [nextjournal.clerk :as clerk]
@@ -24,6 +27,16 @@
   []
   (.isRealized (mount/->DerefableState (str #'node))))
 
+(def db
+  {:dbtype "postgresql"
+   :dbname "xtdb"
+   :user "xtdb"
+   :password "xtdb"
+   :host "localhost"
+   :port 5432})
+
+(def data-path (fs/absolutize (fs/path "data")))
+
 (defn nrepl-handler []
   (require 'cider.nrepl)
   (ns-resolve 'cider.nrepl 'cider-nrepl-handler))
@@ -43,6 +56,21 @@
      :port (Integer/parseInt nrepl-port)
      :bind "0.0.0.0"
      :handler (nrepl-handler))))
+
+(defn parse-file
+  [file-name]
+  (let [reader (io/reader file-name)
+        events (json/parsed-seq reader)]
+    events))
+
+(defn merge-jsonl
+  [& [args]]
+  (doseq [in (:_arguments args)]
+    (let [reader (io/reader in)
+          events (json/parsed-seq reader)]
+      (println (str "|" in "|" (count events) "|"))
+      #_(doseq [v (take 5 events)]
+          (println (get v "id"))))))
 
 (defn clerk-command
   [& [args]]
