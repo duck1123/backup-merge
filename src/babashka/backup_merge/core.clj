@@ -3,19 +3,20 @@
    [babashka.process :refer [shell]]
    [clojure.string :as str]))
 
+(defn execute-nbb
+  [f args]
+  (let [cli-args (apply concat
+                        ["npx nbb"
+                         "-cp src"
+                         (str "-x " f)]
+                        (map (fn [[k v]] (str (name k) " " v)) args))]
+    (:exit (shell (str/join " " cli-args)))))
+
 (defn merge-files
   [& [args]]
   (println args)
-  (let [{:keys [file-a file-b]} args
-        args   ["npx nbb"
-                "-cp src"
-                "-x backup-merge.example/merge-files-command"
-                #_"--"
-                "--file-a"
-                file-a
-                "--file-b"
-                file-b]]
-    (:exit (shell (str/join " " args)))))
+  (let [{:keys [file-a file-b]} args]
+    (execute-nbb "backup-merge.example/merge-files-command" {:file-a file-a :file-b file-b})))
 
 (defn -main
   [& [args]]
@@ -27,8 +28,11 @@
 
 (defn convert-command
   [& [args]]
-  (println args))
+  (println args)
+  (let [in (first (:_arguments args))]
+    (execute-nbb "backup-merge.example/convert-command" {:in in})))
 
+#_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (def CONFIGURATION
   {:app
    {:command     "bm"
@@ -45,6 +49,7 @@
      :runs    -main}
     {:command "convert"
      :opts    [{:option "in"
+                :short "0"
                 :type   :string}]
      :runs    convert-command}
     {:command "merge-files"
