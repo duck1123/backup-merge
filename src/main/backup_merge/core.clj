@@ -15,8 +15,8 @@
     (clerk/serve!
      {:host           "0.0.0.0"
       :port           (Integer/parseInt clerk-port)
-      :show-filter-fn #(str/starts-with? % "notebooks")
-      :watch-paths    ["notebooks" "src"]}))
+      :show-filter-fn #(str/starts-with? % "src/notebooks")
+      :watch-paths    ["src/main" "src/notebooks"]}))
 
   (when-let [nrepl-port (::nrepl-port options)]
     (log/infof "starting server on %s:%s" "0.0.0.0" nrepl-port)
