@@ -1,4 +1,9 @@
-{:deps
- {com.xtdb/xtdb-core                        {:mvn/version "1.24.3"}
-  com.xtdb/xtdb-jdbc                        {:mvn/version "1.24.3"}
-  com.xtdb/xtdb-rocksdb                     {:mvn/version "1.24.3"}}}
+{:paths ["src/main"]
+
+ :deps
+ {cider/cider-nrepl           {:mvn/version "0.49.2"}
+  com.taoensso/timbre         {:mvn/version "6.6.1"}
+  com.xtdb/xtdb-core          {:mvn/version "1.24.3"}
+  com.xtdb/xtdb-jdbc          {:mvn/version "1.24.3"}
+  com.xtdb/xtdb-rocksdb       {:mvn/version "1.24.3"}
+  io.github.nextjournal/clerk {:mvn/version "0.17.1102"}}}
