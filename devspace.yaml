@@ -1,0 +1,8 @@
+version: v2beta1
+name: backup-merge
+
+deployments:
+  backup-merge:
+    helm:
+      chart:
+        name: resources/helm/backup-merge

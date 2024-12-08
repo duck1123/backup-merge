@@ -34,22 +34,20 @@
 
 (defn convert-command
   [& [args]]
-  #_(println args)
   (let [in (first (:_arguments args))]
     (execute-nbb "backup-merge.example/convert-command" {:in in})))
 
 (defn merge-jsonl
   [& [args]]
-  #_(println args)
-  (let [in (or (first (:_arguments args))
-               (:in args))]
-    (comment)
-    (let [reader (io/reader in)
-
-          #_(PushbackReader, in)]
-      (doseq [v (json/parsed-seq reader)]
-        (println #_"." (get v "id")))
-      #_(println "in" in))))
+  (doseq [in (:_arguments args)]
+    #_(println (str "File: " in))
+    (let [reader (io/reader in)]
+      (comment)
+      (let [events (json/parsed-seq reader)]
+        #_(println (str "Event Count: " (count events)))
+        (println (str "|" in "|" (count events) "|"))
+        #_(doseq [v (take 5 events)]
+          (println (get v "id")))))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (def CONFIGURATION
@@ -86,6 +84,7 @@
        :runs        merge-files}
       {:command     "jsonl"
        :description "merge jsonl backups"
+       #_#_
        :opts        [{:option "in"
                       :short  "0"
                       :type   :string}]

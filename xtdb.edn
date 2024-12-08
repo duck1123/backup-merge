@@ -1,0 +1,14 @@
+{:xtdb.http-server/server {:port 3000}
+ :xtdb.jdbc/connection-pool
+ {:dialect {:xtdb/module "xtdb.jdbc.psql/->dialect"}
+  :db-spec
+  {:dbname   "backup-merge"
+   :host     "postgresql.postgresql"
+   :user     "postgres"
+   :password "mysecretpassword"}}
+ :xtdb/document-store
+ {:xtdb/module     "xtdb.jdbc/->document-store"
+  :connection-pool :xtdb.jdbc/connection-pool}
+ :xtdb/tx-log
+ {:xtdb/module     "xtdb.jdbc/->tx-log"
+  :connection-pool :xtdb.jdbc/connection-pool}}

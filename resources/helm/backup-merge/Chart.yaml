@@ -1,0 +1,6 @@
+apiVersion: v2
+name: backup-merge
+description: Nostr backup manager
+type: application
+version: 0.0.1
+appVersion: 0.0.1
