@@ -10,6 +10,7 @@
   ;; com.xtdb/xtdb-jdbc          {:mvn/version "2.0.0-beta2"}
   ;; com.xtdb/xtdb-rocksdb             {:mvn/version "2.0.0-beta2"}
   io.github.nextjournal/clerk       {:mvn/version "0.17.1102"}
+  mount/mount                       {:mvn/version "0.1.20"}
   org.postgresql/postgresql         {:mvn/version "42.7.4"}}
 
 ;; JVM options required for in-process node

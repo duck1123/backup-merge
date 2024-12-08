@@ -1,9 +1,14 @@
 (ns backup-merge.core
   (:require
    [clojure.string :as str]
+   [mount.core :as mount :refer [defstate]]
    [nextjournal.clerk :as clerk]
    [nrepl.server :as nrepl]
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [xtdb.node :as xtn]))
+
+(defstate node
+  :start (xtn/start-node))
 
 (defn nrepl-handler []
   (require 'cider.nrepl)
