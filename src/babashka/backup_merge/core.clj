@@ -3,18 +3,17 @@
    [babashka.process :refer [shell]]
    [cheshire.core :as json]
    [clojure.java.io :as io]
-   [clojure.string :as str])
-  (:import
-   (java.io PushbackReader)))
+   [clojure.string :as str]))
 
 (defn execute-nbb
   [f args]
-  (let [cli-args (apply conj
-                        ["npx nbb"
-                         "-cp src"
-                         (str "-x " f)]
-                        (map (fn [[k v]] (str "--" (name k) " " v)) args))
-        cmd      (str/join " " cli-args)]
+  (let [src-path "src/nbb"
+        base-args ["npx nbb"
+                   (str "-cp " src-path)
+                   (str "-x " f)]
+        arg-args  (map (fn [[k v]] (str "--" (name k) " " v)) args)
+        cli-args  (apply conj base-args arg-args)
+        cmd       (str/join " " cli-args)]
     #_(println cmd)
     (:exit (shell cmd))))
 
@@ -27,8 +26,6 @@
 (defn -main
   [& [args]]
   (let [{:keys [file-a file-b]} args]
-    (println "main")
-    (prn args)
     (prn {:file-a file-a
           :file-b file-b})))
 
@@ -40,14 +37,11 @@
 (defn merge-jsonl
   [& [args]]
   (doseq [in (:_arguments args)]
-    #_(println (str "File: " in))
-    (let [reader (io/reader in)]
-      (comment)
-      (let [events (json/parsed-seq reader)]
-        #_(println (str "Event Count: " (count events)))
-        (println (str "|" in "|" (count events) "|"))
-        #_(doseq [v (take 5 events)]
-          (println (get v "id")))))))
+    (let [reader (io/reader in)
+          events (json/parsed-seq reader)]
+      (println (str "|" in "|" (count events) "|"))
+      #_(doseq [v (take 5 events)]
+          (println (get v "id"))))))
 
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (def CONFIGURATION
@@ -84,8 +78,4 @@
        :runs        merge-files}
       {:command     "jsonl"
        :description "merge jsonl backups"
-       #_#_
-       :opts        [{:option "in"
-                      :short  "0"
-                      :type   :string}]
        :runs        merge-jsonl}]}]})
