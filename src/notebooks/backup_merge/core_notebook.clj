@@ -23,15 +23,33 @@
 ^{::clerk/visibility {:code :hide :result :hide}}
 (def backup-files (fs/list-dir bm/data-path))
 
-(def first-backup (str (first backup-files)))
+^{::clerk/sync true}
+(defonce !state
+  (atom
+   {:backup-file-lines 5
+    :target-file (first backup-files)}))
+
+(def first-backup
+  (str (or
+        (:target-file @!state)
+        (first backup-files))))
 
 (def events (bm/parse-file first-backup))
 
 {::clerk/visibility {:code :show :result :show}}
 
+@!state
+
 ^{::clerk/visibility {:code :hide :result :show}}
 (clerk/html
- [:ul (map (fn [p] [:li (str p)]) (take 5 backup-files))])
+ [:ul
+  (map
+   (fn [p]
+     [:li {}
+      [:a {:on-click (fn [x] (println x))}
+       (str p)]])
+   (take (:backup-file-lines @!state 5)
+         backup-files))])
 
 ^{::clerk/no-cache true}
 bm/node
@@ -69,6 +87,24 @@ bm/node
     [:div
      (map #(v/with-viewer nu/nostr-event-viewer %)
           (take event-count events))]]))
+
+^{::clerk/visibility {:code :hide :result :show}}
+(clerk/with-viewer
+  {:render-fn
+   '(fn []
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !counter inc)}
+       "↑"])}
+  {})
+
+^{::clerk/visibility {:code :hide :result :show}}
+(clerk/with-viewer
+  {:render-fn
+   '(fn []
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !counter dec)}
+       "↓"])}
+  {})
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
