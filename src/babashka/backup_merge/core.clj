@@ -11,6 +11,7 @@
 (defn execute-clojure
   [f args]
   (let [base-args ["clojure"
+                   (str "-Axtdb")
                    (str "-X " f)]
         arg-args  (map (fn [[k v]] (str "--" (name k) " " v)) args)
         cli-args  (apply conj base-args arg-args)

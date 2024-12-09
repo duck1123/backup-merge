@@ -25,20 +25,23 @@
 (defonce !state
   (atom
    {:backup-file-lines 5
+    :backup-page       1
     :event-count       1
+    :event-page        1
     :target-file       (str (first backup-files))
     :xtdb              {:expected false
                         :actual   (bm/db-started?)}}))
 
-(def first-backup
-  (or
-   (:target-file @!state)
-   (str (first backup-files))))
+(def first-backup (:target-file @!state))
 
 (def events (bm/parse-file first-backup))
 
 (def trimmed-files
-  (map str (take (:backup-file-lines @!state 5) backup-files)))
+  (let [{:keys [backup-file-lines backup-page]} @!state]
+    (->> backup-files
+         (drop (* backup-page backup-file-lines))
+         (take backup-file-lines)
+         (map str))))
 
 (def backup-file-button-viewer
   {:render-fn
@@ -46,25 +49,27 @@
 
 (def increase-file-counter-viewer
   {:render-fn
-   '(fn []
-      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
-       {:on-click #(swap! !state update-in [:event-count] inc)}
-       "↑"])})
+   '(let [path [:event-count]]
+      (fn []
+        [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+         {:on-click #(swap! !state update-in path inc)}
+         "↑"]))})
 
 (def decrease-file-counter-viewer
   {:render-fn
-   '(fn []
-      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
-       {:on-click #(swap! !state update-in [:event-count] dec)}
-       "↓"])})
+   '(let [path [:event-count]]
+      (fn []
+        [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+         {:on-click #(swap! !state update-in path dec)}
+         "↓"]))})
 
 (def toggle-xtdb-state
   {:render-fn
-   '(fn []
-      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
-       {:on-click #(swap! !state update-in [:xtdb :expected] not)}
-       (if (get-in @!state [:xtdb :expected])
-         "stop" "start")])})
+   '(let [path [:xtdb :expected]]
+      (fn []
+        [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+         {:on-click #(swap! !state update-in path not)}
+         (if (get-in @!state path) "stop" "start")]))})
 
 (defn state-monitor
   []
@@ -84,6 +89,10 @@
 ^{:clerk/no-cache true}
 (state-monitor)
 
+(def trimmed-events
+  (let [event-count (:event-count @!state)]
+    (take event-count events)))
+
 {::clerk/visibility {:code :show :result :show}}
 
 ^{::clerk/visibility {:code :hide :result :show}}
@@ -102,6 +111,8 @@
 (when (bm/db-started?)
   (xt/status bm/node))
 
+bm/node
+
 ^{::clerk/no-cache true}
 (mount/running-states)
 
@@ -116,9 +127,8 @@
   (clerk/html
    [:div
     [:p "Showing " event-count  " events"]
-    [:div
-     (map #(v/with-viewer nu/nostr-event-viewer %)
-          (take event-count events))]]))
+    [:input {:type "text" :name "foo"}]
+    [:div (map #(v/with-viewer nu/nostr-event-viewer %) trimmed-events)]]))
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (clerk/with-viewer increase-file-counter-viewer {})
@@ -126,12 +136,23 @@
 ^{::clerk/visibility {:code :hide :result :show}}
 (clerk/with-viewer decrease-file-counter-viewer {})
 
+^{::clerk/no-cache true}
+(xt/q bm/node
+      '(from :events [*]))
+
+(def q [(into [:put-docs {:into :events}]
+              (for [event trimmed-events]
+                {:xt/id (get event "id") :event event}))])
+
+
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
   (mount/start)
   (mount/stop)
 
   (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
+
+  (xt/execute-tx bm/node q)
 
   (mount/current-state (str #'bm/node))
   (mount/->DerefableState (str #'bm/node))
