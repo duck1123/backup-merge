@@ -36,6 +36,10 @@
 
 (def events (bm/parse-file first-backup))
 
+(def trimmed-events
+  (let [event-count (:event-count @!state)]
+    (take event-count events)))
+
 (def trimmed-files
   (let [{:keys [backup-file-lines backup-page]} @!state]
     (->> backup-files
@@ -85,15 +89,41 @@
           (log/info "Already stopped")))
       (swap! !state assoc-in [:xtdb :actual] expected))))
 
-
 ^{:clerk/no-cache true}
 (state-monitor)
 
-(def trimmed-events
-  (let [event-count (:event-count @!state)]
-    (take event-count events)))
-
 {::clerk/visibility {:code :show :result :show}}
+
+#_
+(filter
+ seq
+ (map
+  #(dissoc %
+           "content"
+           "created_at"
+           "id"
+           "kind"
+           "pubkey"
+           "sig"
+           "tags"
+           "karma"
+           "seen_on")
+  (flatten
+   (map
+    (fn [f]
+      (bm/parse-file (str f)))
+    backup-files))))
+
+
+(flatten
+ (map
+  (fn [f]
+    (let [rows (bm/parse-file (str f))
+          ids  (map #(get % "id") rows)]
+      {:f    (str f)
+       :c    (count rows)
+       :rows (into #{} ids)}))
+  backup-files))
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (->> (for [p trimmed-files]
@@ -137,13 +167,14 @@ bm/node
 (clerk/with-viewer decrease-file-counter-viewer {})
 
 ^{::clerk/no-cache true}
-(xt/q bm/node
-      '(from :events [*]))
+(when (bm/db-started?)
+  (xt/q bm/node '(from :events [*])))
 
-(def q [(into [:put-docs {:into :events}]
-              (for [event trimmed-events]
-                {:xt/id (get event "id") :event event}))])
 
+(def q
+  [(into [:put-docs {:into :events}]
+         (for [event trimmed-events]
+           {:xt/id (get event "id") :event event}))])
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment

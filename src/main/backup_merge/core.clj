@@ -12,11 +12,17 @@
 
 ;; [Notebook](../../notebooks/backup_merge/core_notebook.clj)
 
+(def xtdb-opts
+  {:log [:local {:path "tx-log"}]
+   :storage [:local {:path "storage"}]
+   }
+  )
+
 (defstate ^{:on-reload :noop} node
   :start
   (do
     (log/info "starting")
-    (xtn/start-node))
+    (xtn/start-node xtdb-opts))
   :stop
   (do
     (log/info "stopping")
