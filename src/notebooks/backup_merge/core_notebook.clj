@@ -5,6 +5,7 @@
    [babashka.fs :as fs]
    [backup-merge.core :as bm]
    [backup-merge.notebook-utils :as nu]
+   [clojure.set :as set]
    [mount.core :as mount]
    [next.jdbc :as jdbc]
    [nextjournal.clerk :as clerk]
@@ -53,16 +54,16 @@
 
 (def increase-file-counter-viewer
   {:render-fn
-   '(let [path [:event-count]]
-      (fn []
+   '(fn [path-obj]
+      (let [path (into [] (map :nextjournal/value path-obj))]
         [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
          {:on-click #(swap! !state update-in path inc)}
          "↑"]))})
 
 (def decrease-file-counter-viewer
   {:render-fn
-   '(let [path [:event-count]]
-      (fn []
+   '(fn [path-obj]
+      (let [path (into [] (map :nextjournal/value path-obj))]
         [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
          {:on-click #(swap! !state update-in path dec)}
          "↓"]))})
@@ -92,6 +93,25 @@
 ^{:clerk/no-cache true}
 (state-monitor)
 
+(defn process-file
+  [f]
+  (let [rows (bm/parse-file (str f))
+        ids  (map #(get % "id") rows)]
+    {:f    (str f)
+     :c    (count rows)
+     :rows (into #{} ids)}))
+
+(defn find-event
+  [file-name id]
+  (let [rows (bm/parse-file (str file-name))]
+    (filter (partial #{id})  rows)))
+
+(def f1 (first backup-files))
+(def f2 (second backup-files))
+
+(def s1 (:rows (process-file f1)))
+(def s2 (:rows (process-file f2)))
+
 {::clerk/visibility {:code :show :result :show}}
 
 #_
@@ -114,17 +134,6 @@
       (bm/parse-file (str f)))
     backup-files))))
 
-
-(flatten
- (map
-  (fn [f]
-    (let [rows (bm/parse-file (str f))
-          ids  (map #(get % "id") rows)]
-      {:f    (str f)
-       :c    (count rows)
-       :rows (into #{} ids)}))
-  backup-files))
-
 ^{::clerk/visibility {:code :hide :result :show}}
 (->> (for [p trimmed-files]
        [:li {} (clerk/with-viewer backup-file-button-viewer p)])
@@ -141,16 +150,11 @@
 (when (bm/db-started?)
   (xt/status bm/node))
 
-bm/node
-
-^{::clerk/no-cache true}
-(mount/running-states)
-
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/with-viewer increase-file-counter-viewer {})
-
-^{::clerk/visibility {:code :hide :result :show}}
-(clerk/with-viewer decrease-file-counter-viewer {})
+(clerk/html
+ [:ul
+  [:li (clerk/with-viewer increase-file-counter-viewer [:event-count])]
+  [:li (clerk/with-viewer decrease-file-counter-viewer [:event-count])]])
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (let [event-count (:event-count @!state)]
@@ -161,10 +165,20 @@ bm/node
     [:div (map #(v/with-viewer nu/nostr-event-viewer %) trimmed-events)]]))
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/with-viewer increase-file-counter-viewer {})
+(clerk/html
+ [:ul
+  [:li (clerk/with-viewer increase-file-counter-viewer [:event-count])]
+  [:li (clerk/with-viewer decrease-file-counter-viewer [:event-count])]])
+
+(flatten (map process-file backup-files))
+
+(set/difference s1 s2)
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/with-viewer decrease-file-counter-viewer {})
+(clerk/table
+ [["in both" (count (set/intersection s1 s2))]
+  ["in a" (count (set/difference s1 (set/intersection s1 s2)))]
+  ["in b" (count (set/difference s2 (set/intersection s1 s2)))]])
 
 ^{::clerk/no-cache true}
 (when (bm/db-started?)
