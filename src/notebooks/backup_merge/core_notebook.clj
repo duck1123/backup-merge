@@ -20,7 +20,7 @@
 {::clerk/visibility {:code :hide :result :hide}}
 
 ^{::clerk/visibility {:code :hide :result :hide}}
-(def backup-files (fs/list-dir bm/data-path))
+(def backup-files (map str (fs/list-dir bm/data-path)))
 
 ^{::clerk/sync true}
 (defonce !state
@@ -29,13 +29,16 @@
     :backup-page       1
     :event-count       1
     :event-page        1
-    :target-file       (str (first backup-files))
+    ;; :target-file       (first backup-files)
+    :file-a            (first backup-files)
+    :file-b            (second backup-files)
     :xtdb              {:expected false
                         :actual   (bm/db-started?)}}))
 
-(def first-backup (:target-file @!state))
+(def f1 (:file-a @!state))
+(def f2 (:file-b @!state))
 
-(def events (bm/parse-file first-backup))
+(def events (bm/parse-file f1))
 
 (def trimmed-events
   (let [event-count (:event-count @!state)]
@@ -50,7 +53,7 @@
 
 (def backup-file-button-viewer
   {:render-fn
-   '(fn [p] [:button {:on-click #(swap! !state assoc :target-file p)} p])})
+   '(fn [p] [:button {:on-click #(swap! !state assoc-in [:file-a] p)} p])})
 
 (def increase-file-counter-viewer
   {:render-fn
@@ -77,9 +80,9 @@
          (if (get-in @!state path) "stop" "start")]))})
 
 (defn state-monitor
-  []
-  (log/info "Running state monitor" @!state)
-  (let [{{:keys [expected actual]} :xtdb} @!state]
+  [state]
+  (log/info "Running state monitor" state)
+  (let [{{:keys [expected actual]} :xtdb} state]
     (when (not= expected actual)
       (if expected
         (if (bm/db-started?)
@@ -91,7 +94,7 @@
       (swap! !state assoc-in [:xtdb :actual] expected))))
 
 ^{:clerk/no-cache true}
-(state-monitor)
+(state-monitor @!state)
 
 (defn process-file
   [f]
@@ -106,11 +109,16 @@
   (let [rows (bm/parse-file (str file-name))]
     (filter (partial #{id})  rows)))
 
-(def f1 (first backup-files))
-(def f2 (second backup-files))
 
 (def s1 (:rows (process-file f1)))
 (def s2 (:rows (process-file f2)))
+
+(defn number-spinner
+  [path]
+  (clerk/html
+   [:ul
+    [:li (clerk/with-viewer increase-file-counter-viewer path)]
+    [:li (clerk/with-viewer decrease-file-counter-viewer path)]]))
 
 {::clerk/visibility {:code :show :result :show}}
 
@@ -134,10 +142,23 @@
       (bm/parse-file (str f)))
     backup-files))))
 
+;; Backup Page
+
+^{::clerk/visibility {:code :hide :result :show}}
+(number-spinner [:backup-page])
+
+;; Backup File Lines
+
+^{::clerk/visibility {:code :hide :result :show}}
+(number-spinner [:backup-file-lines])
+
 ^{::clerk/visibility {:code :hide :result :show}}
 (->> (for [p trimmed-files]
-       [:li {} (clerk/with-viewer backup-file-button-viewer p)])
-     (apply vector :ul)
+       [:tr {}
+        [:td (clerk/with-viewer backup-file-button-viewer p)]
+        [:td "button 2"]
+        [:td "button 3"]])
+     (apply vector :table)
      clerk/html)
 
 ^{::clerk/visibility {:code :hide :result :show}}
@@ -151,10 +172,7 @@
   (xt/status bm/node))
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/html
- [:ul
-  [:li (clerk/with-viewer increase-file-counter-viewer [:event-count])]
-  [:li (clerk/with-viewer decrease-file-counter-viewer [:event-count])]])
+(number-spinner [:event-count])
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (let [event-count (:event-count @!state)]
@@ -165,10 +183,7 @@
     [:div (map #(v/with-viewer nu/nostr-event-viewer %) trimmed-events)]]))
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/html
- [:ul
-  [:li (clerk/with-viewer increase-file-counter-viewer [:event-count])]
-  [:li (clerk/with-viewer decrease-file-counter-viewer [:event-count])]])
+(number-spinner [:event-count])
 
 (flatten (map process-file backup-files))
 
@@ -183,7 +198,6 @@
 ^{::clerk/no-cache true}
 (when (bm/db-started?)
   (xt/q bm/node '(from :events [*])))
-
 
 (def q
   [(into [:put-docs {:into :events}]
