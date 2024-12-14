@@ -8,6 +8,7 @@
    [nextjournal.clerk :as clerk]
    [nrepl.server :as nrepl]
    [taoensso.timbre :as log]
+   [xtdb.api :as xt]
    [xtdb.node :as xtn]))
 
 ;; [Notebook](../../notebooks/backup_merge/core_notebook.clj)
@@ -81,6 +82,11 @@
   [(into [:put-docs {:into :events}]
          (for [event events]
            {:xt/id (get event "id") :event event}))])
+
+(defn load-file!
+  [file-name]
+  (let [rows (parse-file file-name)]
+    (xt/execute-tx node (insert-events rows))))
 
 (defn clerk-command
   [& [args]]
