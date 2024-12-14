@@ -200,6 +200,8 @@
   (let [q '(-> (from :events [*]) (aggregate {:c (row-count)}))]
     (xt/q bm/node q))
 
+  (bm/all-ids)
+
   #_|)
 
 (defn format-e
@@ -230,6 +232,11 @@
           [:td value]
           [:td relays]
           [:td (str/join ", " extras)]])]]]))
+
+(defn format-e1
+  [e]
+  [:div (clerk/with-viewers clerk/default-viewers e)]
+  #_[:pre [:code (str e)]])
 
 ^{:clerk/no-cache true}
 (state-monitor @!state)
@@ -290,7 +297,7 @@
     [:td target-pubkey]
     [:td (clerk/with-viewer reset-pubkey-filter-viewer nil)]]]
   (if (bm/db-started?)
-    [:ul (map format-e db-events)]
+    [:ul (map format-e1 db-events)]
     [:p "Database not started"])
   [:hr]])
 
@@ -302,6 +309,10 @@
 (comment
   (find-event-in-file f1 target-id)
   (find-event-in-file f2 target-id)
+
+  (bm/all-ids)
+
+  (bm/purge-db!)
 
   (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
 

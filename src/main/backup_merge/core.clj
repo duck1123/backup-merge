@@ -88,6 +88,16 @@
   (let [rows (parse-file file-name)]
     (xt/execute-tx node (insert-events rows))))
 
+(defn all-ids
+  []
+  (map :id (xt/q node '(from :events [{:xt/id id}]))))
+
+(defn purge-db!
+  []
+  (let [q [(into [:erase-docs :events] (all-ids))]]
+    (xt/execute-tx node q)
+    #_q))
+
 (defn clerk-command
   [& [args]]
   (log/info "args" args)
