@@ -7,7 +7,6 @@
    [backup-merge.notebook-utils :as nu]
    [clojure.set :as set]
    [mount.core :as mount]
-   [next.jdbc :as jdbc]
    [nextjournal.clerk :as clerk]
    [nextjournal.clerk.viewer :as v]
    [xtdb.api :as xt]
@@ -20,7 +19,11 @@
 {::clerk/visibility {:code :hide :result :hide}}
 
 ^{::clerk/visibility {:code :hide :result :hide}}
-(def backup-files (map str (fs/list-dir bm/data-path)))
+(def backup-files (map
+                   str
+                   ;; #(str (fs/relativize bm/data-path  %))
+                   (fs/list-dir bm/data-path)))
+
 
 ^{::clerk/sync true}
 (defonce !state
@@ -29,7 +32,6 @@
     :backup-page       1
     :event-count       1
     :event-page        1
-    ;; :target-file       (first backup-files)
     :file-a            (first backup-files)
     :file-b            (second backup-files)
     :xtdb              {:expected false
@@ -54,6 +56,10 @@
 (def backup-file-button-viewer
   {:render-fn
    '(fn [p] [:button {:on-click #(swap! !state assoc-in [:file-a] p)} p])})
+
+(def set-file-b-button-viewer
+  {:render-fn
+   '(fn [p] [:button {:on-click #(swap! !state assoc-in [:file-b] p)} "Set B"])})
 
 (def load-file-button-viewer
   {:render-fn
@@ -105,14 +111,16 @@
      :c    (count rows)
      :rows (into #{} ids)}))
 
-(defn find-event
+(defn find-event-in-file
+  "Finds an event in the file"
   [file-name id]
   (let [rows (bm/parse-file file-name)]
     (first (filter #(= id (get % "id")) rows))))
 
 (def s1 (:rows (process-file f1)))
 (def s2 (:rows (process-file f2)))
-(def target-id (first (set/intersection s1 s2)))
+(def i1 (set/intersection s1 s2))
+(def target-id (first i1))
 
 (defn number-spinner
   [path]
@@ -149,39 +157,33 @@
 
 {::clerk/visibility {:code :hide :result :show}}
 
-(clerk/md (str "Backup Page " (:backup-page @!state)))
+(clerk/md (str "Backup Page " (:backup-page @!state) " / "
+               (int (Math/ceil (/ (count backup-files) (:backup-file-lines @!state))))))
 (number-spinner [:backup-page])
 
-(clerk/md (str "Backup File Lines " (:backup-file-lines @!state)))
+(clerk/md (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files)))
 (number-spinner [:backup-file-lines])
 
 (->> (for [p trimmed-files]
        [:tr {}
         [:td (clerk/with-viewer backup-file-button-viewer p)]
+        [:td (clerk/with-viewer set-file-b-button-viewer p)]
         [:td (clerk/with-viewer load-file-button-viewer p)]
         [:td "button 3"]])
      (apply vector :table)
      clerk/html)
 
-{::clerk/visibility {:code :show :result :show}}
-
-(find-event f1 target-id)
-(find-event f2 target-id)
-
-^{::clerk/visibility {:code :hide :result :show}}
 (clerk/code @!state)
 
-^{::clerk/visibility {:code :hide :result :show}}
 (clerk/with-viewer toggle-xtdb-state {:state !state})
 
- ^{::clerk/no-cache true}
-(when (bm/db-started?)
-  (xt/status bm/node))
+^{::clerk/no-cache true}
+(if (bm/db-started?)
+  (clerk/code (xt/status bm/node))
+  (clerk/html [:p "XTDB not started"]))
 
-^{::clerk/visibility {:code :hide :result :show}}
 (number-spinner [:event-count])
 
-^{::clerk/visibility {:code :hide :result :show}}
 (let [event-count (:event-count @!state)]
   (clerk/html
    [:div
@@ -189,40 +191,37 @@
     [:input {:type "text" :name "foo"}]
     [:div (map #(v/with-viewer nu/nostr-event-viewer %) trimmed-events)]]))
 
-^{::clerk/visibility {:code :hide :result :show}}
 (number-spinner [:event-count])
 
-(flatten (map process-file backup-files))
+(clerk/table
+ [["In Both"   (count i1)]
+  ["In File A" (count (set/difference s1 i1))]
+  ["In File B" (count (set/difference s2 i1))]])
 
-(set/difference s1 s2)
+{::clerk/visibility {:code :show :result :show}}
+
+#_(flatten (map process-file backup-files))
 
 ^{::clerk/visibility {:code :hide :result :show}}
-(clerk/table
- [["in both" (count (set/intersection s1 s2))]
-  ["in a" (count (set/difference s1 (set/intersection s1 s2)))]
-  ["in b" (count (set/difference s2 (set/intersection s1 s2)))]])
+(clerk/html [:hr])
 
-^{::clerk/no-cache true}
-(when (bm/db-started?)
-  (xt/q bm/node '(from :events [*])))
+;; Events in database
+
+^{::clerk/visibility {:code :hide :result :show}}
+(if (bm/db-started?)
+  (clerk/table (xt/q bm/node '(from :events [*])))
+  (clerk/html [:p "Database not started"]))
+
+^{::clerk/visibility {:code :hide :result :show}}
+(clerk/html [:hr])
+
+(find-event-in-file f1 target-id)
+(find-event-in-file f2 target-id)
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
-  (mount/start)
-  (mount/stop)
-
   (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
 
   (xt/execute-tx bm/node (bm/insert-events trimmed-events))
-
-  (mount/current-state (str #'bm/node))
-  (mount/->DerefableState (str #'bm/node))
-
-  (xt/status bm/node)
-
-  (with-open [conn (jdbc/get-connection bm/db)]
-    (jdbc/execute! conn ["INSERT INTO users RECORDS {_id: 'jms', name: 'James'}, {_id: 'joe', name: 'Joe'}"])
-
-    (prn (jdbc/execute! conn ["SELECT * FROM users"])))
 
   #_|)
