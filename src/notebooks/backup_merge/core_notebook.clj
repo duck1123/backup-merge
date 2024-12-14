@@ -191,9 +191,10 @@
        (limit 5)))
 
 (def db-events
-  #_[]
-  (let [q (event-query)]
-    (xt/q bm/node q {:args {:target-pubkey target-pubkey}})))
+  (if (bm/db-started?)
+    (let [q (event-query)]
+      (xt/q bm/node q {:args {:target-pubkey target-pubkey}}))
+    []))
 
 (comment
 
