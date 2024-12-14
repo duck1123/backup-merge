@@ -25,7 +25,7 @@
 ^{::clerk/sync true}
 (defonce !state
   (atom
-   {:backup-file-lines 5
+   {:backup-file-lines 33
     :backup-page       1
     :event-count       1
     :event-page        1
@@ -53,28 +53,48 @@
          (map str))))
 
 (def backup-file-button-viewer
+  {:transform-fn clerk/mark-preserve-keys
+   :render-fn
+   '(fn [{:keys [p rel] :as opts}]
+      #_(str opts)
+      #_(str (:nextjournal/value p))
+      (str (:nextjournal/value rel))
+      #_(str (count opts))
+      #_[:ul
+         [:li
+          #_(str (keys (nth opts 0)))
+          (str (count (:nextjournal/value (nth opts 0))))]
+         [:li (str (nth opts 1))]]
+      #_[:button
+         {:on-click #(swap! !state assoc-in [:file-a] p)}
+         rel])})
+
+(def set-file-a-button-viewer
   {:render-fn
-   '(fn [p] [:button {:on-click #(swap! !state assoc-in [:file-a] p)} p])})
+   '(fn [p] [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+             {:on-click #(swap! !state assoc-in [:file-a] p)} "Set A"])})
 
 (def set-file-b-button-viewer
   {:render-fn
-   '(fn [p] [:button {:on-click #(swap! !state assoc-in [:file-b] p)} "Set B"])})
+   '(fn [p] [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+             {:on-click #(swap! !state assoc-in [:file-b] p)} "Set B"])})
 
 (def load-file-button-viewer
   {:render-fn
-   '(fn [p] [:button {:on-click #(swap! !state update-in [:pending-loads] conj p)} "Load"])})
+   '(fn [p] [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+             {:on-click #(swap! !state update-in [:pending-loads] conj p)} "Load"])})
 
 (def filter-pubkey-viewer
   {:render-fn
    '(fn [p]
-      [:button
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
        {:on-click #(swap! !state assoc-in [:filters :pubkey] p)}
        p])})
 
 (def reset-pubkey-filter-viewer
   {:render-fn
    '(fn [p]
-      [:button
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
        {:on-click #(swap! !state assoc-in [:filters :pubkey] nil)}
        "Reset Pubkey"])})
 
@@ -248,7 +268,7 @@
      [:td target-pubkey]
      [:td (clerk/with-viewer reset-pubkey-filter-viewer nil)]]]
    (if (bm/db-started?)
-     [:ul (map format-e1 db-events)]
+     [:ul (map format-e db-events)]
      [:p "Database not started"])
    [:hr]])
 
@@ -266,6 +286,17 @@
    ["In File A" (count (set/difference s1 i1))]
    ["In File B" (count (set/difference s2 i1))]])
 
+(defn file-picker
+  []
+  (->> (for [p trimmed-files]
+         [:tr {}
+          [:td (str (fs/relativize bm/data-path p))]
+          [:td (clerk/with-viewer set-file-a-button-viewer p)]
+          [:td (clerk/with-viewer set-file-b-button-viewer p)]
+          (when (bm/db-started?)
+            [:td (clerk/with-viewer load-file-button-viewer p)])])
+       (apply vector :table)))
+
 ^{:clerk/no-cache true}
 (state-monitor @!state)
 
@@ -274,7 +305,7 @@
 (clerk/with-viewer toggle-xtdb-state {:state !state})
 
 (clerk/html
- [:div {}
+ [:div.border-red.border-1
   [:div {}
    [:div {} (str "Backup Page " (:backup-page @!state) " / "
                  (int (Math/ceil (/ (count backup-files) (:backup-file-lines @!state)))))]
@@ -284,29 +315,22 @@
    [:div {} (number-spinner [:backup-file-lines])]]])
 
 ^{::clerk/no-cache true}
-(->> (for [p trimmed-files]
-       [:tr {}
-        [:td (clerk/with-viewer backup-file-button-viewer p)]
-        [:td (clerk/with-viewer set-file-b-button-viewer p)]
-        (when (bm/db-started?)
-          [:td (clerk/with-viewer load-file-button-viewer p)])
-        #_[:td "button 3"]])
-     (apply vector :table)
-     clerk/html)
+(clerk/html (file-picker))
 
 (clerk/code @!state)
 
 ^{::clerk/no-cache true}
-(if (bm/db-started?)
+#_(if (bm/db-started?)
   (clerk/code (xt/status bm/node))
   (clerk/html [:p "XTDB not started"]))
 
-(clerk/html (number-spinner [:event-count]))
+#_(clerk/html (number-spinner [:event-count]))
 
-(clerk/html (file-viewer))
+#_(clerk/html (file-viewer))
 
 (clerk/table (file-diff))
 
+^{::clerk/no-cache true}
 (clerk/html (db-viewer))
 
 {::clerk/visibility {:code :show :result :show}}
