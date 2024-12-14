@@ -6,6 +6,7 @@
    [backup-merge.core :as bm]
    [backup-merge.notebook-utils :as nu]
    [clojure.set :as set]
+   [clojure.string :as str]
    [mount.core :as mount]
    [nextjournal.clerk :as clerk]
    [nextjournal.clerk.viewer :as v]
@@ -31,6 +32,7 @@
     :pending-loads     []
     :file-a            (first backup-files)
     :file-b            (second backup-files)
+    :filters           {:pubkey nil}
     :xtdb              {:expected false
                         :actual   (bm/db-started?)}}))
 
@@ -61,6 +63,20 @@
 (def load-file-button-viewer
   {:render-fn
    '(fn [p] [:button {:on-click #(swap! !state update-in [:pending-loads] conj p)} "Load"])})
+
+(def filter-pubkey-viewer
+  {:render-fn
+   '(fn [p]
+      [:button
+       {:on-click #(swap! !state assoc-in [:filters :pubkey] p)}
+       p])})
+
+(def reset-pubkey-filter-viewer
+  {:render-fn
+   '(fn [p]
+      [:button
+       {:on-click #(swap! !state assoc-in [:filters :pubkey] nil)}
+       "Reset Pubkey"])})
 
 (def increase-file-counter-viewer
   {:render-fn
@@ -164,13 +180,35 @@
         (bm/parse-file (str f)))
       backup-files)))))
 
-(def db-events (take 5 (xt/q bm/node '(from :events [*]))))
+(def target-pubkey (get-in @!state [:filters :pubkey]))
+
+(defn event-query
+  []
+  '(-> (from :events [{:xt/id id} event])
+       #_(where (if $target-pubkey
+                (= (:pubkey event) $target-pubkey)
+                true))
+       (limit 5)))
+
+(def db-events
+  #_[]
+  (let [q (event-query)]
+    (xt/q bm/node q {:args {:target-pubkey target-pubkey}})))
+
+(comment
+
+  (let [q '(-> (from :events [*]) (aggregate {:c (row-count)}))]
+    (xt/q bm/node q))
+
+  #_|)
 
 (defn format-e
   [e]
   (let [{:keys [event]} e]
     [:li
-     [:p "Author: " (:pubkey event)]
+     [:p "Author: "
+      (clerk/with-viewer filter-pubkey-viewer
+        (:pubkey event))]
      [:p (:kind event)]
      [:p (:content event)]
      [:p (str (java.sql.Timestamp. (* (:created-at event) 1000)))]
@@ -191,20 +229,20 @@
           [:td a]
           [:td b]
           [:td c]
-          [:td (str r)]])]]]))
+          [:td (str/join ", " r)]])]]]))
 
 ^{:clerk/no-cache true}
 (state-monitor @!state)
 
-{::clerk/visibility {:code :show :result :show}}
-
 {::clerk/visibility {:code :hide :result :show}}
 
-(clerk/md (str "Backup Page " (:backup-page @!state) " / "
-               (int (Math/ceil (/ (count backup-files) (:backup-file-lines @!state))))))
+(clerk/md
+ (str "Backup Page " (:backup-page @!state) " / "
+      (int (Math/ceil (/ (count backup-files) (:backup-file-lines @!state))))))
 (number-spinner [:backup-page])
 
-(clerk/md (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files)))
+(clerk/md
+ (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files)))
 (number-spinner [:backup-file-lines])
 
 ^{::clerk/no-cache true}
@@ -243,23 +281,22 @@
   ["In File A" (count (set/difference s1 i1))]
   ["In File B" (count (set/difference s2 i1))]])
 
+(clerk/html
+ [:div
+  [:hr]
+  [:h3 "Events in database"]
+  [:table
+   [:tr
+    [:td target-pubkey]
+    [:td (clerk/with-viewer reset-pubkey-filter-viewer nil)]]]
+  (if (bm/db-started?)
+    [:ul (map format-e db-events)]
+    [:p "Database not started"])
+  [:hr]])
+
 {::clerk/visibility {:code :show :result :show}}
 
-#_(flatten (map process-file backup-files))
-
-^{::clerk/visibility {:code :hide :result :show}}
-(clerk/html [:hr])
-
-;; Events in database
-
-^{::clerk/no-cache true ::clerk/visibility {:code :hide :result :show}}
-(clerk/html
- (if (bm/db-started?)
-   [:ul (map format-e db-events)]
-   [:p "Database not started"]))
-
-^{::clerk/visibility {:code :hide :result :show}}
-(clerk/html [:hr])
+(event-query)
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
