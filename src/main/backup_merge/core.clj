@@ -32,6 +32,9 @@
   []
   (.isRealized (mount/->DerefableState (str #'node))))
 
+(clerk/example
+ (db-started?))
+
 (def db
   {:dbtype "postgresql"
    :dbname "xtdb"
@@ -91,6 +94,9 @@
 (defn all-ids
   []
   (map :id (xt/q node '(from :events [{:xt/id id}]))))
+
+(clerk/example
+ (all-ids))
 
 (defn purge-db!
   []
