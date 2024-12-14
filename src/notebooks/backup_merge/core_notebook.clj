@@ -19,11 +19,7 @@
 {::clerk/visibility {:code :hide :result :hide}}
 
 ^{::clerk/visibility {:code :hide :result :hide}}
-(def backup-files (map
-                   str
-                   ;; #(str (fs/relativize bm/data-path  %))
-                   (fs/list-dir bm/data-path)))
-
+(def backup-files (map str (fs/list-dir bm/data-path)))
 
 ^{::clerk/sync true}
 (defonce !state
@@ -32,6 +28,7 @@
     :backup-page       1
     :event-count       1
     :event-page        1
+    :pending-loads     []
     :file-a            (first backup-files)
     :file-b            (second backup-files)
     :xtdb              {:expected false
@@ -63,7 +60,7 @@
 
 (def load-file-button-viewer
   {:render-fn
-   '(fn [p] [:button {:on-click #(swap! !state assoc-in [:file-a] p)} "Load"])})
+   '(fn [p] [:button {:on-click #(swap! !state update-in [:pending-loads] conj p)} "Load"])})
 
 (def increase-file-counter-viewer
   {:render-fn
@@ -89,9 +86,8 @@
          {:on-click #(swap! !state update-in path not)}
          (if (get-in @!state path) "stop" "start")]))})
 
-(defn state-monitor
+(defn toggle-db-connection
   [state]
-  (log/info "Running state monitor" state)
   (let [{{:keys [expected actual]} :xtdb} state]
     (when (not= expected actual)
       (if expected
@@ -102,6 +98,24 @@
           (mount/stop)
           (log/info "Already stopped")))
       (swap! !state assoc-in [:xtdb :actual] expected))))
+
+(defn process-pending-loads
+  [state]
+  (if (bm/db-started?)
+    (do
+      (log/info "Process pending loads")
+      (let [[pl & r] (:pending-loads state)]
+        (when pl
+          (log/info "processing file" pl)
+          (bm/load-file! pl)
+          (swap! !state assoc-in [:pending-loads] (or r [])))))
+    (log/error "Db Not started")))
+
+(defn state-monitor
+  [state]
+  (log/info "Running state monitor" state)
+  (toggle-db-connection state)
+  (process-pending-loads state))
 
 (defn process-file
   [f]
@@ -164,12 +178,14 @@
 (clerk/md (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files)))
 (number-spinner [:backup-file-lines])
 
+^{::clerk/no-cache true}
 (->> (for [p trimmed-files]
        [:tr {}
         [:td (clerk/with-viewer backup-file-button-viewer p)]
         [:td (clerk/with-viewer set-file-b-button-viewer p)]
-        [:td (clerk/with-viewer load-file-button-viewer p)]
-        [:td "button 3"]])
+        (when (bm/db-started?)
+          [:td (clerk/with-viewer load-file-button-viewer p)])
+        #_[:td "button 3"]])
      (apply vector :table)
      clerk/html)
 
@@ -207,9 +223,12 @@
 
 ;; Events in database
 
-^{::clerk/visibility {:code :hide :result :show}}
+^{::clerk/no-cache true ::clerk/visibility {:code :hide :result :show}}
 (if (bm/db-started?)
-  (clerk/table (xt/q bm/node '(from :events [*])))
+  (clerk/table
+   (map
+    #(update-in % [:event] dissoc :id)
+    (xt/q bm/node '(from :events [*]))))
   (clerk/html [:p "Database not started"]))
 
 ^{::clerk/visibility {:code :hide :result :show}}
