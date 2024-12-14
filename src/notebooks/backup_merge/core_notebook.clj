@@ -164,6 +164,35 @@
         (bm/parse-file (str f)))
       backup-files)))))
 
+(def db-events (take 5 (xt/q bm/node '(from :events [*]))))
+
+(defn format-e
+  [e]
+  (let [{:keys [event]} e]
+    [:li
+     [:p "Author: " (:pubkey event)]
+     [:p (:kind event)]
+     [:p (:content event)]
+     [:p (str (java.sql.Timestamp. (* (:created-at event) 1000)))]
+     [:p (:sig event)]
+     (let [others (dissoc event :id :pubkey :kind :content :tags :created-at :sig)]
+       (when (seq others)
+         [:p [:code [:pre (str others)]]]))
+     [:table
+      [:thead
+       [:tr
+        [:th "tag"]
+        [:th "value"]
+        [:th "relay"]
+        [:th "extra"]]]
+      [:tbody
+       (for [[a b c & r] (:tags event)]
+         [:tr
+          [:td a]
+          [:td b]
+          [:td c]
+          [:td (str r)]])]]]))
+
 ^{:clerk/no-cache true}
 (state-monitor @!state)
 
@@ -223,15 +252,6 @@
 
 ;; Events in database
 
-(def db-events (take 5 (xt/q bm/node '(from :events [*]))))
-
-(defn format-e
-  [e]
-  (let [{:keys [event]} e]
-    [:li
-     [:p (:content event)]
-     [:p (dissoc event :id)]]))
-
 ^{::clerk/no-cache true ::clerk/visibility {:code :hide :result :show}}
 (clerk/html
  (if (bm/db-started?)
@@ -241,11 +261,11 @@
 ^{::clerk/visibility {:code :hide :result :show}}
 (clerk/html [:hr])
 
-(find-event-in-file f1 target-id)
-(find-event-in-file f2 target-id)
-
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
+  (find-event-in-file f1 target-id)
+  (find-event-in-file f2 target-id)
+
   (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
 
   (xt/execute-tx bm/node (bm/insert-events trimmed-events))
