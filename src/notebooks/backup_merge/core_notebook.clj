@@ -223,13 +223,20 @@
 
 ;; Events in database
 
+(def db-events (take 5 (xt/q bm/node '(from :events [*]))))
+
+(defn format-e
+  [e]
+  (let [{:keys [event]} e]
+    [:li
+     [:p (:content event)]
+     [:p (dissoc event :id)]]))
+
 ^{::clerk/no-cache true ::clerk/visibility {:code :hide :result :show}}
-(if (bm/db-started?)
-  (clerk/table
-   (map
-    #(update-in % [:event] dissoc :id)
-    (xt/q bm/node '(from :events [*]))))
-  (clerk/html [:p "Database not started"]))
+(clerk/html
+ (if (bm/db-started?)
+   [:ul (map format-e db-events)]
+   [:p "Database not started"]))
 
 ^{::clerk/visibility {:code :hide :result :show}}
 (clerk/html [:hr])
