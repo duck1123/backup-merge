@@ -224,12 +224,12 @@
         [:th "relay"]
         [:th "extra"]]]
       [:tbody
-       (for [[a b c & r] (:tags event)]
+       (for [[tag value relays & extras] (:tags event)]
          [:tr
-          [:td a]
-          [:td b]
-          [:td c]
-          [:td (str/join ", " r)]])]]]))
+          [:td tag]
+          [:td value]
+          [:td relays]
+          [:td (str/join ", " extras)]])]]]))
 
 ^{:clerk/no-cache true}
 (state-monitor @!state)
