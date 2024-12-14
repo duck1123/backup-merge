@@ -1,5 +1,8 @@
+/.clerk/
 /.clj-kondo/.cache/
+/.clj-kondo/.lock
 /.clj-kondo/imports/
+/.clj-kondo/inline-configs/
 /.cpcache/
 /.direnv/
 /.envrc
