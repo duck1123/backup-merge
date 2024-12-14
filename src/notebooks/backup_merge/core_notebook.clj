@@ -154,10 +154,9 @@
 
 (defn number-spinner
   [path]
-  (clerk/html
-   [:ul
-    [:li (clerk/with-viewer increase-file-counter-viewer path)]
-    [:li (clerk/with-viewer decrease-file-counter-viewer path)]]))
+  [:ul
+   [:li (clerk/with-viewer increase-file-counter-viewer path)]
+   [:li (clerk/with-viewer decrease-file-counter-viewer path)]])
 
 (defn find-extra-keys
   []
@@ -239,19 +238,50 @@
   [:div (clerk/with-viewers clerk/default-viewers e)]
   #_[:pre [:code (str e)]])
 
+(defn db-viewer
+  []
+  [:div
+   [:hr]
+   [:h3 "Events in database"]
+   [:table
+    [:tr
+     [:td target-pubkey]
+     [:td (clerk/with-viewer reset-pubkey-filter-viewer nil)]]]
+   (if (bm/db-started?)
+     [:ul (map format-e1 db-events)]
+     [:p "Database not started"])
+   [:hr]])
+
+(defn file-viewer
+  []
+  (let [event-count (:event-count @!state)]
+    [:div
+     [:p "Showing " event-count  " events"]
+     [:input {:type "text" :name "foo"}]
+     [:div (map #(v/with-viewer nu/nostr-event-viewer %) trimmed-events)]]))
+
+(defn file-diff
+  []
+  [["In Both"   (count i1)]
+   ["In File A" (count (set/difference s1 i1))]
+   ["In File B" (count (set/difference s2 i1))]])
+
 ^{:clerk/no-cache true}
 (state-monitor @!state)
 
 {::clerk/visibility {:code :hide :result :show}}
 
-(clerk/md
- (str "Backup Page " (:backup-page @!state) " / "
-      (int (Math/ceil (/ (count backup-files) (:backup-file-lines @!state))))))
-(number-spinner [:backup-page])
+(clerk/with-viewer toggle-xtdb-state {:state !state})
 
-(clerk/md
- (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files)))
-(number-spinner [:backup-file-lines])
+(clerk/html
+ [:div {}
+  [:div {}
+   [:div {} (str "Backup Page " (:backup-page @!state) " / "
+                 (int (Math/ceil (/ (count backup-files) (:backup-file-lines @!state)))))]
+   [:div {} (number-spinner [:backup-page])]]
+  [:div {}
+   [:div {} (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files))]
+   [:div {} (number-spinner [:backup-file-lines])]]])
 
 ^{::clerk/no-cache true}
 (->> (for [p trimmed-files]
@@ -266,41 +296,18 @@
 
 (clerk/code @!state)
 
-(clerk/with-viewer toggle-xtdb-state {:state !state})
-
 ^{::clerk/no-cache true}
 (if (bm/db-started?)
   (clerk/code (xt/status bm/node))
   (clerk/html [:p "XTDB not started"]))
 
-(number-spinner [:event-count])
+(clerk/html (number-spinner [:event-count]))
 
-(let [event-count (:event-count @!state)]
-  (clerk/html
-   [:div
-    [:p "Showing " event-count  " events"]
-    [:input {:type "text" :name "foo"}]
-    [:div (map #(v/with-viewer nu/nostr-event-viewer %) trimmed-events)]]))
+(clerk/html (file-viewer))
 
-(number-spinner [:event-count])
+(clerk/table (file-diff))
 
-(clerk/table
- [["In Both"   (count i1)]
-  ["In File A" (count (set/difference s1 i1))]
-  ["In File B" (count (set/difference s2 i1))]])
-
-(clerk/html
- [:div
-  [:hr]
-  [:h3 "Events in database"]
-  [:table
-   [:tr
-    [:td target-pubkey]
-    [:td (clerk/with-viewer reset-pubkey-filter-viewer nil)]]]
-  (if (bm/db-started?)
-    [:ul (map format-e1 db-events)]
-    [:p "Database not started"])
-  [:hr]])
+(clerk/html (db-viewer))
 
 {::clerk/visibility {:code :show :result :show}}
 
