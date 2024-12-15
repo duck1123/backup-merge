@@ -32,7 +32,9 @@
     :pending-loads     []
     :file-a            (first backup-files)
     :file-b            (second backup-files)
-    :filters           {:pubkey nil}
+    :filters           {:event  nil
+                        :kind   nil
+                        :pubkey nil}
     :xtdb              {:expected false
                         :actual   (bm/db-started?)}}))
 
@@ -186,18 +188,25 @@
 
 (defn event-query
   []
-  '(-> (from :events [{:xt/id id #_#_:event {:pubkey pubkey}} event])
-       #_(where (= pubkey $target-pubkey)
-              #_(if $target-pubkey
-                (= (:pubkey event) $target-pubkey)
-                true))
+  '(-> (from :events [*])
+       (where (or (nil? $target-pubkey) (= pubkey $target-pubkey)))
        (limit 5)))
 
+^{:clerk/no-cache true}
 (def db-events
   (if (bm/db-started?)
     (let [q (event-query)]
-      (xt/q bm/node q {:args {:target-pubkey target-pubkey}}))
+      (xt/q bm/node q
+            {:args {:target-pubkey target-pubkey}}))
     []))
+
+(defn get-db-events
+  []
+  (if (bm/db-started?)
+    (let [q (event-query)]
+      (log/info "target-pubkey " target-pubkey)
+      (xt/q bm/node q {:args {:target-pubkey target-pubkey}}))
+    (throw (ex-info "DB not started" {}))))
 
 (defn count-all
   []
@@ -210,6 +219,8 @@
 (comment
 
   (event-query)
+
+  (get-db-events)
 
   (let [q '(-> (from :events [*]) (aggregate {:c (row-count)}))]
     (xt/q bm/node q))
@@ -230,13 +241,12 @@
   #_|)
 
 (defn format-e
-  [e]
-  (let [event e]
+  [event]
+  (let [{:keys [kind pubkey tags]} event]
     [:li
      [:p "Author: "
-      (clerk/with-viewer filter-pubkey-viewer
-        (:pubkey event))]
-     [:p (:kind event)]
+      (clerk/with-viewer filter-pubkey-viewer pubkey)]
+     [:p kind]
      [:p (:content event)]
      [:p (str (java.sql.Timestamp. (* (:created-at event) 1000)))]
      [:p (:sig event)]
@@ -251,10 +261,12 @@
         [:th "relay"]
         [:th "extra"]]]
       [:tbody
-       (for [[tag value relays & extras] (:tags event)]
+       (for [[tag value relays & extras] tags]
          [:tr
           [:td tag]
-          [:td value]
+          [:td (if (= tag "p")
+                 (clerk/with-viewer filter-pubkey-viewer value)
+                 value)]
           [:td relays]
           [:td (str/join ", " extras)]])]]]))
 
@@ -341,6 +353,11 @@
 {::clerk/visibility {:code :show :result :show}}
 
 (count trimmed-files)
+
+^{::clerk/no-cache true}
+(count-all)
+
+^{::clerk/no-cache true}
 (count db-events)
 
 (event-query)
