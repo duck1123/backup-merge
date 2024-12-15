@@ -52,23 +52,6 @@
          (take backup-file-lines)
          (map str))))
 
-(def backup-file-button-viewer
-  {:transform-fn clerk/mark-preserve-keys
-   :render-fn
-   '(fn [{:keys [p rel] :as opts}]
-      #_(str opts)
-      #_(str (:nextjournal/value p))
-      (str (:nextjournal/value rel))
-      #_(str (count opts))
-      #_[:ul
-         [:li
-          #_(str (keys (nth opts 0)))
-          (str (count (:nextjournal/value (nth opts 0))))]
-         [:li (str (nth opts 1))]]
-      #_[:button
-         {:on-click #(swap! !state assoc-in [:file-a] p)}
-         rel])})
-
 (def set-file-a-button-viewer
   {:render-fn
    '(fn [p] [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
@@ -203,8 +186,9 @@
 
 (defn event-query
   []
-  '(-> (from :events [{:xt/id id} event])
-       #_(where (if $target-pubkey
+  '(-> (from :events [{:xt/id id #_#_:event {:pubkey pubkey}} event])
+       #_(where (= pubkey $target-pubkey)
+              #_(if $target-pubkey
                 (= (:pubkey event) $target-pubkey)
                 true))
        (limit 5)))
@@ -215,10 +199,23 @@
       (xt/q bm/node q {:args {:target-pubkey target-pubkey}}))
     []))
 
+(defn count-all
+  []
+  (if (bm/db-started?)
+    (let [q '(-> (from :events [*])
+                 (aggregate {:c (row-count)}))]
+      (:c (first (xt/q bm/node q {:args {:target-pubkey target-pubkey}}))))
+    0))
+
 (comment
+
+  (event-query)
 
   (let [q '(-> (from :events [*]) (aggregate {:c (row-count)}))]
     (xt/q bm/node q))
+
+  (count-all)
+
 
   (bm/all-ids)
 
