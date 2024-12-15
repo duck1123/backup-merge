@@ -84,10 +84,12 @@
   [events]
   [(into [:put-docs {:into :events}]
          (for [event events]
-           {:xt/id (get event "id") :event event}))])
+           (let [id (get event "id")]
+             (assoc event :xt/id id))))])
 
 (defn load-file!
   [file-name]
+  (log/info "Loading file" file-name)
   (let [rows (parse-file file-name)]
     (xt/execute-tx node (insert-events rows))))
 

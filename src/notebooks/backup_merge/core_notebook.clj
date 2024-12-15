@@ -48,7 +48,7 @@
 (def trimmed-files
   (let [{:keys [backup-file-lines backup-page]} @!state]
     (->> backup-files
-         (drop (* backup-page backup-file-lines))
+         (drop (* (dec backup-page) backup-file-lines))
          (take backup-file-lines)
          (map str))))
 
@@ -216,14 +216,22 @@
 
   (count-all)
 
+  (bm/purge-db!)
 
   (bm/all-ids)
+
+  (find-event-in-file f1 target-id)
+  (find-event-in-file f2 target-id)
+
+  (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
+
+  (xt/execute-tx bm/node (bm/insert-events trimmed-events))
 
   #_|)
 
 (defn format-e
   [e]
-  (let [{:keys [event]} e]
+  (let [event e]
     [:li
      [:p "Author: "
       (clerk/with-viewer filter-pubkey-viewer
@@ -332,19 +340,7 @@
 
 {::clerk/visibility {:code :show :result :show}}
 
+(count trimmed-files)
+(count db-events)
+
 (event-query)
-
-^{::clerk/visibility {:code :hide :result :hide}}
-(comment
-  (find-event-in-file f1 target-id)
-  (find-event-in-file f2 target-id)
-
-  (bm/all-ids)
-
-  (bm/purge-db!)
-
-  (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
-
-  (xt/execute-tx bm/node (bm/insert-events trimmed-events))
-
-  #_|)
