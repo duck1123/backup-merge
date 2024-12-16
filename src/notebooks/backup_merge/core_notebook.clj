@@ -242,14 +242,14 @@
 
 (defn format-e
   [event]
-  (let [{:keys [kind pubkey tags]} event]
+  (let [{:keys [content created-at kind pubkey sig tags]} event]
     [:li
      [:p "Author: "
       (clerk/with-viewer filter-pubkey-viewer pubkey)]
      [:p kind]
-     [:p (:content event)]
-     [:p (str (java.sql.Timestamp. (* (:created-at event) 1000)))]
-     [:p (:sig event)]
+     [:p content]
+     [:p (str (java.sql.Timestamp. (* created-at 1000)))]
+     [:p sig]
      (let [others (dissoc event :id :pubkey :kind :content :tags :created-at :sig)]
        (when (seq others)
          [:p [:code [:pre (str others)]]]))
@@ -264,9 +264,10 @@
        (for [[tag value relays & extras] tags]
          [:tr
           [:td tag]
-          [:td (if (= tag "p")
-                 (clerk/with-viewer filter-pubkey-viewer value)
-                 value)]
+          [:td
+           (case tag
+             "p" (clerk/with-viewer filter-pubkey-viewer value)
+             :default value)]
           [:td relays]
           [:td (str/join ", " extras)]])]]]))
 
