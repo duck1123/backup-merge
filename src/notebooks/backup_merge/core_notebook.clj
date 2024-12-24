@@ -1,5 +1,5 @@
 ^{:nextjournal.clerk/visibility {:code :hide}}
-(ns notebooks.backup-merge.core-notebook
+(ns backup-merge.core-notebook
   ;; {:nextjournal.clerk/toc true}
   (:require
    [babashka.fs :as fs]
@@ -267,7 +267,7 @@
           [:td
            (case tag
              "p" (clerk/with-viewer filter-pubkey-viewer value)
-             :default value)]
+             :else value)]
           [:td relays]
           [:td (str/join ", " extras)]])]]]))
 
