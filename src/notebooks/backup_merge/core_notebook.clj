@@ -69,12 +69,26 @@
    '(fn [p] [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
              {:on-click #(swap! !state update-in [:pending-loads] conj p)} "Load"])})
 
+(def filter-event-viewer
+  {:render-fn
+   '(fn [value]
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !state assoc-in [:filters :event] value)}
+       value])})
+
 (def filter-pubkey-viewer
   {:render-fn
-   '(fn [p]
+   '(fn [value]
       [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
-       {:on-click #(swap! !state assoc-in [:filters :pubkey] p)}
-       p])})
+       {:on-click #(swap! !state assoc-in [:filters :pubkey] value)}
+       value])})
+
+(def reset-event-filter-viewer
+  {:render-fn
+   '(fn [_value]
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !state assoc-in [:filters :event] nil)}
+       "Reset Event"])})
 
 (def reset-pubkey-filter-viewer
   {:render-fn
@@ -158,6 +172,7 @@
 (def target-id (first i1))
 
 (defn number-spinner
+  "Displays a spinner for adjusting a value at path"
   [path]
   [:ul
    [:li (clerk/with-viewer increase-file-counter-viewer path)]
@@ -184,6 +199,7 @@
         (bm/parse-file (str f)))
       backup-files)))))
 
+(def target-event (get-in @!state [:filters :event]))
 (def target-pubkey (get-in @!state [:filters :pubkey]))
 
 (defn event-query
@@ -242,7 +258,10 @@
 
 (defn format-e
   [event]
-  (let [{:keys [content created-at kind pubkey sig tags]} event]
+  (let [{:keys [content created-at
+                kind pubkey sig tags]} event
+        used-keys                      #{:id :pubkey :kind :content :tags :created-at :sig :xt/id}
+        others                         (apply dissoc event used-keys)]
     [:li
      [:p "Author: "
       (clerk/with-viewer filter-pubkey-viewer pubkey)]
@@ -250,9 +269,8 @@
      [:p content]
      [:p (str (java.sql.Timestamp. (* created-at 1000)))]
      [:p sig]
-     (let [others (dissoc event :id :pubkey :kind :content :tags :created-at :sig)]
-       (when (seq others)
-         [:p [:code [:pre (str others)]]]))
+     (when (seq others)
+       [:p [:code [:pre (str others)]]])
      [:table
       [:thead
        [:tr
@@ -267,7 +285,8 @@
           [:td
            (case tag
              "p" (clerk/with-viewer filter-pubkey-viewer value)
-             :else value)]
+             "e" (clerk/with-viewer filter-event-viewer value)
+             value)]
           [:td relays]
           [:td (str/join ", " extras)]])]]]))
 
@@ -284,7 +303,10 @@
    [:table
     [:tr
      [:td target-pubkey]
-     [:td (clerk/with-viewer reset-pubkey-filter-viewer nil)]]]
+     [:td (clerk/with-viewer reset-pubkey-filter-viewer nil)]]
+    [:tr
+     [:td target-event]
+     [:td (clerk/with-viewer reset-event-filter-viewer nil)]]]
    (if (bm/db-started?)
      [:ul (map format-e db-events)]
      [:p "Database not started"])
