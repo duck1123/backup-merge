@@ -205,7 +205,13 @@
 (defn event-query
   []
   '(-> (from :events [*])
-       (where (or (nil? $target-pubkey) (= pubkey $target-pubkey)))
+       (where
+        (or (nil? $target-pubkey) (= pubkey $target-pubkey))
+        (or (nil? $target-event)
+            (= id $target-event)
+            #_(->> tags
+                 (map (fn [[tag value]] (when (= tag "e") value)))
+                 (some identity))))
        (limit 5)))
 
 ^{:clerk/no-cache true}
@@ -213,7 +219,8 @@
   (if (bm/db-started?)
     (let [q (event-query)]
       (xt/q bm/node q
-            {:args {:target-pubkey target-pubkey}}))
+            {:args {:target-event  target-event
+                    :target-pubkey target-pubkey}}))
     []))
 
 (defn get-db-events
@@ -240,6 +247,32 @@
 
   (let [q '(-> (from :events [*]) (aggregate {:c (row-count)}))]
     (xt/q bm/node q))
+
+  "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed"
+
+  (xt/q bm/node
+        '(unify
+          (from :events [{:xt/id event-id #_#_:tags ts} content sig])
+          (join (-> (from :events [{:xt/id event-id} tags])
+                    (unnest {:tag tags})
+                    (unnest {:tag2 tag})
+                    (where (= tag2 "e"))
+                    (unnest {:value tag})
+                    (where (= value "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed"))
+                    (limit 10))
+                [event-id #_tags #_content])))
+
+  (xt/q bm/node
+        '(-> (from :events [{:xt/id event-id} content *])
+             (limit 10)))
+
+  #_(where
+     (filter identity
+             (map
+              (fn [[tag value]]
+                (when (= tag "e")
+                  (= value "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed")))
+              tags)))
 
   (count-all)
 
