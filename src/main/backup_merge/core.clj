@@ -106,6 +106,114 @@
     (xt/execute-tx node q)
     #_q))
 
+(defn event-query
+  []
+  '(-> (from :events [*])
+       (where
+        (or (nil? $target-pubkey) (= pubkey $target-pubkey))
+        (or (nil? $target-event)
+            (= id $target-event)))
+       (limit 5)))
+
+(defn get-db-events
+  [target-event target-pubkey]
+  (if (db-started?)
+    (let [q (event-query)]
+      (xt/q node q
+            {:args {:target-event  target-event
+                    :target-pubkey target-pubkey}}))
+    []))
+
+(defn get-trimmed-files
+  [!state backup-files]
+  (let [{:keys [backup-file-lines backup-page]} @!state]
+    (->> backup-files
+         (drop (* (dec backup-page) backup-file-lines))
+         (take backup-file-lines)
+         (map str))))
+
+(defn get-trimmed-events
+  [!state f1]
+  (let [events (parse-file f1)
+        event-count (:event-count @!state)]
+    (take event-count events)))
+
+(defn get-backup-files
+  []
+  (map str (fs/list-dir data-path)))
+
+(defn toggle-db-connection
+  [!state]
+  (let [{{:keys [expected actual]} :xtdb} !state
+        started? (db-started?)]
+    (when (not= expected actual)
+      (if expected
+        (if started?
+          (log/info "Already started")
+          (mount/start))
+        (if started?
+          (mount/stop)
+          (log/info "Already stopped")))
+      (swap! !state assoc-in [:xtdb :actual] expected))))
+
+(defn process-pending-loads
+  [!state]
+  (if (db-started?)
+    (do
+      (log/info "Process pending loads")
+      (let [[pl & r] (:pending-loads !state)]
+        (when pl
+          (log/info "processing file" pl)
+          (load-file! pl)
+          (swap! !state assoc-in [:pending-loads] (or r [])))))
+    (log/error "Db Not started")))
+
+(defn state-monitor
+  [!state]
+  (log/info "Running state monitor" !state)
+  (toggle-db-connection !state)
+  (process-pending-loads !state))
+
+(defn process-file
+  [f]
+  (let [rows (parse-file (str f))
+        ids  (map #(get % "id") rows)]
+    {:f    (str f)
+     :c    (count rows)
+     :rows (into #{} ids)}))
+
+(defn find-event-in-file
+  "Finds an event in the file"
+  [file-name id]
+  (let [rows (parse-file file-name)]
+    (first (filter #(= id (get % "id")) rows))))
+
+(defn find-extra-keys
+  [backup-files]
+  (let [n-fields ["content"
+                  "created_at"
+                  "id"
+                  "kind"
+                  "pubkey"
+                  "sig"
+                  "tags"
+                  "karma"
+                  "seen_on"]]
+    (->> backup-files
+         (map #(parse-file (str %)))
+         flatten
+         (map #(apply dissoc % n-fields))
+         (filter seq))))
+
+(defn count-all
+  ([] (count-all nil))
+  ([target-pubkey]
+   (if (db-started?)
+     (let [q '(-> (from :events [*])
+                  (aggregate {:c (row-count)}))]
+       (:c (first (xt/q node q {:args {:target-pubkey target-pubkey}}))))
+     0)))
+
 (defn clerk-command
   [& [args]]
   (log/info "args" args)

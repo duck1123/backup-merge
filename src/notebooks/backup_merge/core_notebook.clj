@@ -19,8 +19,7 @@
 
 {::clerk/visibility {:code :hide :result :hide}}
 
-^{::clerk/visibility {:code :hide :result :hide}}
-(def backup-files (map str (fs/list-dir bm/data-path)))
+(def backup-files (bm/get-backup-files))
 
 ^{::clerk/sync true}
 (defonce !state
@@ -41,18 +40,8 @@
 (def f1 (:file-a @!state))
 (def f2 (:file-b @!state))
 
-(def events (bm/parse-file f1))
-
-(def trimmed-events
-  (let [event-count (:event-count @!state)]
-    (take event-count events)))
-
-(def trimmed-files
-  (let [{:keys [backup-file-lines backup-page]} @!state]
-    (->> backup-files
-         (drop (* (dec backup-page) backup-file-lines))
-         (take backup-file-lines)
-         (map str))))
+(def trimmed-events (bm/get-trimmed-events !state f1))
+(def trimmed-files (bm/get-trimmed-files !state backup-files))
 
 (def set-file-a-button-viewer
   {:render-fn
@@ -121,53 +110,8 @@
          {:on-click #(swap! !state update-in path not)}
          (if (get-in @!state path) "stop" "start")]))})
 
-(defn toggle-db-connection
-  [state]
-  (let [{{:keys [expected actual]} :xtdb} state]
-    (when (not= expected actual)
-      (if expected
-        (if (bm/db-started?)
-          (log/info "Already started")
-          (mount/start))
-        (if (bm/db-started?)
-          (mount/stop)
-          (log/info "Already stopped")))
-      (swap! !state assoc-in [:xtdb :actual] expected))))
-
-(defn process-pending-loads
-  [state]
-  (if (bm/db-started?)
-    (do
-      (log/info "Process pending loads")
-      (let [[pl & r] (:pending-loads state)]
-        (when pl
-          (log/info "processing file" pl)
-          (bm/load-file! pl)
-          (swap! !state assoc-in [:pending-loads] (or r [])))))
-    (log/error "Db Not started")))
-
-(defn state-monitor
-  [state]
-  (log/info "Running state monitor" state)
-  (toggle-db-connection state)
-  (process-pending-loads state))
-
-(defn process-file
-  [f]
-  (let [rows (bm/parse-file (str f))
-        ids  (map #(get % "id") rows)]
-    {:f    (str f)
-     :c    (count rows)
-     :rows (into #{} ids)}))
-
-(defn find-event-in-file
-  "Finds an event in the file"
-  [file-name id]
-  (let [rows (bm/parse-file file-name)]
-    (first (filter #(= id (get % "id")) rows))))
-
-(def s1 (:rows (process-file f1)))
-(def s2 (:rows (process-file f2)))
+(def s1 (:rows (bm/process-file f1)))
+(def s2 (:rows (bm/process-file f2)))
 (def i1 (set/intersection s1 s2))
 (def target-id (first i1))
 
@@ -178,72 +122,17 @@
    [:li (clerk/with-viewer increase-file-counter-viewer path)]
    [:li (clerk/with-viewer decrease-file-counter-viewer path)]])
 
-(defn find-extra-keys
-  []
-  (filter
-   seq
-   (map
-    #(dissoc %
-             "content"
-             "created_at"
-             "id"
-             "kind"
-             "pubkey"
-             "sig"
-             "tags"
-             "karma"
-             "seen_on")
-    (flatten
-     (map
-      (fn [f]
-        (bm/parse-file (str f)))
-      backup-files)))))
-
 (def target-event (get-in @!state [:filters :event]))
 (def target-pubkey (get-in @!state [:filters :pubkey]))
 
-(defn event-query
-  []
-  '(-> (from :events [*])
-       (where
-        (or (nil? $target-pubkey) (= pubkey $target-pubkey))
-        (or (nil? $target-event)
-            (= id $target-event)
-            #_(->> tags
-                 (map (fn [[tag value]] (when (= tag "e") value)))
-                 (some identity))))
-       (limit 5)))
-
 ^{:clerk/no-cache true}
-(def db-events
-  (if (bm/db-started?)
-    (let [q (event-query)]
-      (xt/q bm/node q
-            {:args {:target-event  target-event
-                    :target-pubkey target-pubkey}}))
-    []))
-
-(defn get-db-events
-  []
-  (if (bm/db-started?)
-    (let [q (event-query)]
-      (log/info "target-pubkey " target-pubkey)
-      (xt/q bm/node q {:args {:target-pubkey target-pubkey}}))
-    (throw (ex-info "DB not started" {}))))
-
-(defn count-all
-  []
-  (if (bm/db-started?)
-    (let [q '(-> (from :events [*])
-                 (aggregate {:c (row-count)}))]
-      (:c (first (xt/q bm/node q {:args {:target-pubkey target-pubkey}}))))
-    0))
+(def db-events (bm/get-db-events target-event target-pubkey))
 
 (comment
 
-  (event-query)
+  (bm/event-query)
 
-  (get-db-events)
+  (bm/get-db-events target-event target-pubkey)
 
   (let [q '(-> (from :events [*]) (aggregate {:c (row-count)}))]
     (xt/q bm/node q))
@@ -274,14 +163,14 @@
                   (= value "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed")))
               tags)))
 
-  (count-all)
+  (bm/count-all target-pubkey)
 
   (bm/purge-db!)
 
   (bm/all-ids)
 
-  (find-event-in-file f1 target-id)
-  (find-event-in-file f2 target-id)
+  (bm/find-event-in-file f1 target-id)
+  (bm/find-event-in-file f2 target-id)
 
   (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
 
@@ -370,36 +259,30 @@
             [:td (clerk/with-viewer load-file-button-viewer p)])])
        (apply vector :table)))
 
+(defn pagination-controls
+  []
+  [:div.border-red.border-1
+   [:div {}
+    [:div {} (str "Backup Page " (:backup-page @!state) " / "
+                  (int (Math/ceil (/ (count backup-files) (:backup-file-lines @!state)))))]
+    [:div {} (number-spinner [:backup-page])]]
+   [:div {}
+    [:div {} (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files))]
+    [:div {} (number-spinner [:backup-file-lines])]]])
+
 ^{:clerk/no-cache true}
-(state-monitor @!state)
+(bm/state-monitor @!state)
 
 {::clerk/visibility {:code :hide :result :show}}
 
 (clerk/with-viewer toggle-xtdb-state {:state !state})
 
-(clerk/html
- [:div.border-red.border-1
-  [:div {}
-   [:div {} (str "Backup Page " (:backup-page @!state) " / "
-                 (int (Math/ceil (/ (count backup-files) (:backup-file-lines @!state)))))]
-   [:div {} (number-spinner [:backup-page])]]
-  [:div {}
-   [:div {} (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files))]
-   [:div {} (number-spinner [:backup-file-lines])]]])
+(clerk/html (pagination-controls))
 
 ^{::clerk/no-cache true}
 (clerk/html (file-picker))
 
 (clerk/code @!state)
-
-^{::clerk/no-cache true}
-#_(if (bm/db-started?)
-  (clerk/code (xt/status bm/node))
-  (clerk/html [:p "XTDB not started"]))
-
-#_(clerk/html (number-spinner [:event-count]))
-
-#_(clerk/html (file-viewer))
 
 (clerk/table (file-diff))
 
@@ -411,9 +294,9 @@
 (count trimmed-files)
 
 ^{::clerk/no-cache true}
-(count-all)
+(bm/count-all target-pubkey)
 
 ^{::clerk/no-cache true}
 (count db-events)
 
-(event-query)
+(bm/event-query)
