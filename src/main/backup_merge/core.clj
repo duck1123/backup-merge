@@ -90,8 +90,13 @@
 (defn load-file!
   [file-name]
   (log/info "Loading file" file-name)
-  (let [rows (parse-file file-name)]
-    (xt/execute-tx node (insert-events rows))))
+  (let [rows (take 5 (parse-file file-name))]
+    (doseq [event rows]
+      (log/info "Processing Event" event)
+      (let [{:keys [id]} event]
+        (doseq [tag (:tags event)]
+          (log/info "Processing tag" id  tag))))
+    #_(xt/execute-tx node (insert-events rows))))
 
 (defn all-ids
   []
@@ -143,8 +148,8 @@
   (map str (fs/list-dir data-path)))
 
 (defn toggle-db-connection
-  [!state]
-  (let [{{:keys [expected actual]} :xtdb} !state
+  [!state _state]
+  (let [{{:keys [expected actual]} :xtdb} @!state
         started? (db-started?)]
     (when (not= expected actual)
       (if expected
@@ -161,7 +166,7 @@
   (if (db-started?)
     (do
       (log/info "Process pending loads")
-      (let [[pl & r] (:pending-loads !state)]
+      (let [[pl & r] (:pending-loads @!state)]
         (when pl
           (log/info "processing file" pl)
           (load-file! pl)

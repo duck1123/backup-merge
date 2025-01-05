@@ -7,11 +7,9 @@
    [backup-merge.notebook-utils :as nu]
    [clojure.set :as set]
    [clojure.string :as str]
-   [mount.core :as mount]
    [nextjournal.clerk :as clerk]
    [nextjournal.clerk.viewer :as v]
-   [xtdb.api :as xt]
-   [taoensso.timbre :as log]))
+   [xtdb.api :as xt]))
 
 ;; # Backup Merge
 
@@ -125,59 +123,6 @@
 (def target-event (get-in @!state [:filters :event]))
 (def target-pubkey (get-in @!state [:filters :pubkey]))
 
-^{:clerk/no-cache true}
-(def db-events (bm/get-db-events target-event target-pubkey))
-
-(comment
-
-  (bm/event-query)
-
-  (bm/get-db-events target-event target-pubkey)
-
-  (let [q '(-> (from :events [*]) (aggregate {:c (row-count)}))]
-    (xt/q bm/node q))
-
-  "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed"
-
-  (xt/q bm/node
-        '(unify
-          (from :events [{:xt/id event-id #_#_:tags ts} content sig])
-          (join (-> (from :events [{:xt/id event-id} tags])
-                    (unnest {:tag tags})
-                    (unnest {:tag2 tag})
-                    (where (= tag2 "e"))
-                    (unnest {:value tag})
-                    (where (= value "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed"))
-                    (limit 10))
-                [event-id #_tags #_content])))
-
-  (xt/q bm/node
-        '(-> (from :events [{:xt/id event-id} content *])
-             (limit 10)))
-
-  #_(where
-     (filter identity
-             (map
-              (fn [[tag value]]
-                (when (= tag "e")
-                  (= value "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed")))
-              tags)))
-
-  (bm/count-all target-pubkey)
-
-  (bm/purge-db!)
-
-  (bm/all-ids)
-
-  (bm/find-event-in-file f1 target-id)
-  (bm/find-event-in-file f2 target-id)
-
-  (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
-
-  (xt/execute-tx bm/node (bm/insert-events trimmed-events))
-
-  #_|)
-
 (defn format-e
   [event]
   (let [{:keys [content created-at
@@ -219,20 +164,22 @@
 
 (defn db-viewer
   []
-  [:div
-   [:hr]
-   [:h3 "Events in database"]
-   [:table
-    [:tr
-     [:td target-pubkey]
-     [:td (clerk/with-viewer reset-pubkey-filter-viewer nil)]]
-    [:tr
-     [:td target-event]
-     [:td (clerk/with-viewer reset-event-filter-viewer nil)]]]
-   (if (bm/db-started?)
-     [:ul (map format-e db-events)]
-     [:p "Database not started"])
-   [:hr]])
+  (let [started?    (bm/db-started?)
+        event-count (bm/count-all target-pubkey)
+        db-events   (bm/get-db-events target-event target-pubkey)]
+    [:div
+     [:hr]
+     [:h3 "Events in database: " event-count]
+     [:table
+      [:tr
+       [:td target-pubkey]
+       [:td (clerk/with-viewer reset-pubkey-filter-viewer nil)]]
+      [:tr
+       [:td target-event]
+       [:td (clerk/with-viewer reset-event-filter-viewer nil)]]]
+     (if started?
+       [:ul (map format-e db-events)]
+       [:p "Database not started"])]))
 
 (defn file-viewer
   []
@@ -271,7 +218,7 @@
     [:div {} (number-spinner [:backup-file-lines])]]])
 
 ^{:clerk/no-cache true}
-(bm/state-monitor @!state)
+(bm/state-monitor !state @!state)
 
 {::clerk/visibility {:code :hide :result :show}}
 
@@ -289,14 +236,43 @@
 ^{::clerk/no-cache true}
 (clerk/html (db-viewer))
 
-{::clerk/visibility {:code :show :result :show}}
+^{::clerk/visibility {:code :hide :result :hide}}
+(comment
 
-(count trimmed-files)
+  (bm/event-query)
 
-^{::clerk/no-cache true}
-(bm/count-all target-pubkey)
+  (bm/get-db-events target-event target-pubkey)
 
-^{::clerk/no-cache true}
-(count db-events)
+  (let [q '(-> (from :events [*]) (aggregate {:c (row-count)}))]
+    (xt/q bm/node q))
 
-(bm/event-query)
+  "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed"
+
+  (xt/q bm/node
+        '(unify
+          (from :events [{:xt/id event-id #_#_:tags ts} content sig])
+          (join (-> (from :events [{:xt/id event-id} tags])
+                    (unnest {:tag tags})
+                    (unnest {:tag2 tag})
+                    (where (= tag2 "e"))
+                    (unnest {:value tag})
+                    (where (= value "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed"))
+                    (limit 10))
+                [event-id #_tags #_content])))
+
+  (xt/q bm/node
+        '(-> (from :events [{:xt/id event-id} content *])
+             (limit 10)))
+
+  (bm/purge-db!)
+
+  (bm/all-ids)
+
+  (bm/find-event-in-file f1 target-id)
+  (bm/find-event-in-file f2 target-id)
+
+  (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
+
+  (xt/execute-tx bm/node (bm/insert-events trimmed-events))
+
+  #_|)
