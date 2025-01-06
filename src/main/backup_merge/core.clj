@@ -68,7 +68,7 @@
 (defn parse-file
   [file-name]
   (let [reader (io/reader file-name)
-        events (json/parsed-seq reader)]
+        events (json/parsed-seq reader keyword)]
     events))
 
 (defn merge-jsonl
@@ -90,13 +90,29 @@
 (defn load-file!
   [file-name]
   (log/info "Loading file" file-name)
-  (let [rows (take 5 (parse-file file-name))]
-    (doseq [event rows]
-      (log/info "Processing Event" event)
-      (let [{:keys [id]} event]
-        (doseq [tag (:tags event)]
-          (log/info "Processing tag" id  tag))))
-    #_(xt/execute-tx node (insert-events rows))))
+  (let [rows                      (take 5 (parse-file file-name))
+        pairs                     (for [{:keys [id tags] :as event} rows]
+                                    (let [tag-docs (map-indexed
+                                                    (fn [position tag]
+                                                      (let [[tag-key value & others] tag]
+                                                        {:xt/id    (str id ":" position)
+                                                         :event-id id
+                                                         :position position
+                                                         :tag      tag-key
+                                                         :value    value
+                                                         :others   others}))
+                                                       tags)]
+                                      {:tag-docs tag-docs :events [(dissoc event :tags)]}))
+        {:keys [events tag-docs]} (reduce
+                                   (fn [acc i]
+                                     {:tag-docs (mapcat :tag-docs [acc i])
+                                      :events   (mapcat :events [acc i])})
+                                   {:tag-docs [] :events []}
+                                   pairs)
+        stmts                     [(into [:put-docs {:into :tags} tag-docs])
+                                   (into [:put-docs {:into :events} events])]]
+    (log/info "stmts" stmts)
+    (xt/execute-tx node stmts)))
 
 (defn all-ids
   []
@@ -174,9 +190,9 @@
     (log/error "Db Not started")))
 
 (defn state-monitor
-  [!state]
+  [!state state]
   (log/info "Running state monitor" !state)
-  (toggle-db-connection !state)
+  (toggle-db-connection !state state)
   (process-pending-loads !state))
 
 (defn process-file
