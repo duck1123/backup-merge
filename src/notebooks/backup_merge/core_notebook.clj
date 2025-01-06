@@ -248,6 +248,15 @@
 
   "33f1453db8737237a39b584c8eb20345cc391d54ad81cf91dc0715ad574812ed"
 
+  (bm/get-tags)
+
+  (xt/q bm/node
+        '(-> (from :tags [*])
+             (where (= tag "e"))
+             (limit 5)
+             (order-by position)
+             ))
+
   (xt/q bm/node
         '(unify
           (from :events [{:xt/id event-id #_#_:tags ts} content sig])

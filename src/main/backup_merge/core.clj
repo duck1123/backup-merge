@@ -101,16 +101,19 @@
                                                          :tag      tag-key
                                                          :value    value
                                                          :others   others}))
-                                                       tags)]
-                                      {:tag-docs tag-docs :events [(dissoc event :tags)]}))
+                                                    tags)]
+                                      {:tag-docs tag-docs :events [(assoc
+                                                                    (dissoc event :tags)
+                                                                    :xt/id id
+                                                                    )]}))
         {:keys [events tag-docs]} (reduce
                                    (fn [acc i]
                                      {:tag-docs (mapcat :tag-docs [acc i])
                                       :events   (mapcat :events [acc i])})
                                    {:tag-docs [] :events []}
                                    pairs)
-        stmts                     [(into [:put-docs {:into :tags} tag-docs])
-                                   (into [:put-docs {:into :events} events])]]
+        stmts                     [(into [:put-docs {:into :tags}] tag-docs)
+                                   (into [:put-docs {:into :events}] events)]]
     (log/info "stmts" stmts)
     (xt/execute-tx node stmts)))
 
@@ -144,6 +147,15 @@
             {:args {:target-event  target-event
                     :target-pubkey target-pubkey}}))
     []))
+
+(defn get-tags
+  []
+  (if (db-started?)
+
+    (xt/q node '(-> (from :tags [*])
+                    (limit 5)))
+    [])
+  )
 
 (defn get-trimmed-files
   [!state backup-files]
