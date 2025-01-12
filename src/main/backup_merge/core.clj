@@ -13,6 +13,8 @@
 
 ;; [Notebook](../../notebooks/backup_merge/core_notebook.clj)
 
+(def base-path "../../org-roam/")
+
 (def xtdb-opts
   {:log     [:local {:path "tx-log"}]
    :storage [:local {:path "storage"}]})
@@ -44,6 +46,9 @@
    :port 5432})
 
 (def data-path (fs/absolutize (fs/path "data")))
+
+(def org-data-path (fs/absolutize (fs/path base-path)))
+(def org-daily-data-path (fs/absolutize (fs/path base-path "daily")))
 
 (defn nrepl-handler []
   (require 'cider.nrepl)
@@ -174,6 +179,14 @@
 (defn get-backup-files
   []
   (map str (fs/list-dir data-path)))
+
+(defn get-org-files
+  []
+  (map fs/canonicalize (fs/list-dir org-data-path)))
+
+(defn get-org-daily-files
+  []
+  (map fs/canonicalize (fs/list-dir org-daily-data-path)))
 
 (defn toggle-db-connection
   [!state _state]

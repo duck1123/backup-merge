@@ -9,6 +9,7 @@
    [clojure.string :as str]
    [nextjournal.clerk :as clerk]
    [nextjournal.clerk.viewer :as v]
+   [orgmode.core :as org]
    [xtdb.api :as xt]))
 
 ;; # Backup Merge
@@ -24,6 +25,7 @@
   (atom
    {:backup-file-lines 33
     :backup-page       1
+    :org-path          (str (fs/path bm/base-path "daily/2024-09-15.org"))
     :event-count       1
     :event-page        1
     :pending-loads     []
@@ -55,6 +57,12 @@
   {:render-fn
    '(fn [p] [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
              {:on-click #(swap! !state update-in [:pending-loads] conj p)} "Load"])})
+
+(def load-org-button-viewer
+  {:render-fn
+   '(fn [file]
+      [:button.bg-sky-500.hover:bg-sky-700.text-white.rounded-xl.px-2.py-1
+       {:on-click #(swap! !state assoc-in [:org-path] file)} "Load"])})
 
 (def filter-event-viewer
   {:render-fn
@@ -217,6 +225,137 @@
     [:div {} (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files))]
     [:div {} (number-spinner [:backup-file-lines])]]])
 
+(declare process-content)
+
+(defn process-content-item
+  [content-item]
+  (if (string? content-item)
+    (str #_"str: " content-item)
+    (let [{:keys [content listlevel listtype text type uri]} content-item]
+      (when-not (and (= type :p) (= content []))
+        (if (= type :list)
+          [:ul (map (fn [c] [:li (process-content-item c)]) content)]
+          (if (= type :link)
+            [:div
+             [:a {:href (str "#" uri)}
+              [:div #_"link: " (map process-content-item content)]]
+             #_[:pre#link-content [:code (pr-str content-item)]]]
+            (->> [(when-not (and true (#{:p #_:link :listitem} type))
+                    [:pre#ca-pre [:code (pr-str content-item)]])
+                  (when (#{:list} type)
+                    [:p "list Level: " listlevel])
+                  (when listtype
+                    [:p "list Type: " (str listtype)])
+                  (when-not (#{:link :listitem :p} type)
+                    [:p (str "type: " type)])
+                  (when (#{:link} type)
+                    [:a {:href (str "#" uri)}
+                     (process-content content)])
+                  (when-not (#{:link} type)
+                    (when (seq text)
+                      (str "text: " text)))
+                  (when-not (#{:link} type)
+                    (when (seq content)
+                      [:div #_"-" (process-content content)]))]
+                 (filter identity)
+                 (into [:div {:style {:border "1px solid red"
+                                      :margin-bottom "5px"}}]))))))))
+
+(defn process-content
+  [items]
+  (if (every? string? items)
+    (apply str (:content items))
+    (->> items
+         (map process-content-item)
+         (into [:div #_{:style {:border "1px solid green"}}]))))
+
+(defn process-entry
+  [c]
+  (let [{:keys [content tags text todo type]} c
+        created                               (get-in c [:properties :created])]
+    (->> [(when text [:p text])
+          (when todo [:p#todo todo])
+          (when (seq tags)
+            (->> tags
+                 (map (fn [tag] [:li tag]))
+                 (into [:ul])))
+          (when-not (#{:headline} type)
+            [:p "Type: " (str type)])
+          (when created [:p "Created: " created])
+          [:pre#c-pre
+           [:code
+            (pr-str
+             (-> c
+                 #_(dissoc :text :type :todo :tags :content)
+                 #_(update :properties #(dissoc % :created))))]]
+          [:div#entry-content
+           #_[:pre [:code (pr-str content)]]
+           (process-content content)]]
+         (filter identity)
+         (into [:div#entry-item
+                {:style
+                 {:border        "1px blue solid"
+                  :margin-bottom "10px"}}]))))
+
+(defn process-page
+  [path]
+  (let [page              (org/parse path)
+        page-title        (get-in page [:attribs :title])
+        page-id           (get-in page [:properties :id])
+        top-level-content (->> (:content page)
+                               #_(take 7))]
+    [:div#page {:style {:border "1px solid white"
+                        :padding "2px"}}
+     [:h1#page-title page-title]
+     [:h2#page-id page-id]
+     (->> top-level-content
+          (map process-entry)
+          (into [:div#entry-list]))]))
+
+(defn org-directory-viewer
+  []
+  (let [page 2]
+    (->> (bm/get-org-files)
+         #_(filter #(fs/ends-with? % "org"))
+         (filter #(= (fs/extension %) "org"))
+         sort
+         (drop (* (dec page) 10))
+         (take (* 1 #_(dec page) 10))
+         (map
+          (fn [f]
+            (let [base (fs/canonicalize (fs/path bm/base-path))
+                  rel  (str (fs/relativize base f))
+                  full (str (fs/canonicalize (fs/path bm/base-path rel)))]
+              [:tr
+               #_[:td (str f)]
+               #_[:td (str (fs/extension f)  #_(fs/ends-with? f "org"))]
+               [:td rel]
+               #_[:td full]
+               [:td (clerk/with-viewer load-org-button-viewer #_rel full)]])))
+         (into [:table]))))
+
+(defn org-daily-directory-viewer
+  []
+  (let [page 2]
+    (->> (bm/get-org-daily-files)
+         #_(filter #(fs/ends-with? % "org"))
+         (filter #(= (fs/extension %) "org"))
+         sort
+         (drop (* (dec page) 10))
+         (take 10)
+         (map
+          (fn [f]
+            (let [base (fs/canonicalize (fs/path bm/base-path "daily"))
+                  rel  (str (fs/relativize base f))
+                  full (str (fs/canonicalize (fs/path base rel)))]
+              [:tr
+               #_[:td (str f)]
+               #_[:td (str (fs/extension f)  #_(fs/ends-with? f "org"))]
+               [:td rel]
+               #_[:td full]
+               [:td (clerk/with-viewer load-org-button-viewer #_rel full)]])))
+         (into [:table]))))
+
 ^{:clerk/no-cache true}
 (bm/state-monitor !state @!state)
 
@@ -224,17 +363,26 @@
 
 (clerk/with-viewer toggle-xtdb-state {:state !state})
 
-(clerk/html (pagination-controls))
+;; (clerk/html (pagination-controls))
 
-^{::clerk/no-cache true}
-(clerk/html (file-picker))
+;; ^{::clerk/no-cache true}
+;; (clerk/html (file-picker))
 
 (clerk/code @!state)
 
-(clerk/table (file-diff))
+;; (clerk/table (file-diff))
 
-^{::clerk/no-cache true}
-(clerk/html (db-viewer))
+;; ^{::clerk/no-cache true}
+;; (clerk/html (db-viewer))
+
+;; ^{::clerk/viewer clerk/html ::clerk/no-cache true}
+;; (org-directory-viewer)
+
+^{::clerk/viewer clerk/html ::clerk/no-cache true}
+(org-daily-directory-viewer)
+
+^{::clerk/viewer clerk/html ::clerk/no-cache true}
+(process-page (:org-path @!state))
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
@@ -254,8 +402,7 @@
         '(-> (from :tags [*])
              (where (= tag "e"))
              (limit 5)
-             (order-by position)
-             ))
+             (order-by position)))
 
   (xt/q bm/node
         '(unify

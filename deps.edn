@@ -9,8 +9,11 @@
   com.xtdb/xtdb-http-client-jvm     {:mvn/version "2.0.0-beta2"}
   io.github.nextjournal/clerk       {:mvn/version "0.17.1102"}
   mount/mount                       {:mvn/version "0.1.20"}
-  org.postgresql/postgresql         {:mvn/version "42.7.4"}}
+  org.postgresql/postgresql         {:mvn/version "42.7.4"}
+  io.github.bnbeckwith/orgmode      {:local/root "../orgmode"
+                                     #_#_:git/url "https://github.com/bnbeckwith/orgmode"
+                                     #_#_:sha     "39bfb27f33c9caee1233c338bdcea0045861ec3c"}}
 
- ;; JVM options required for in-process node
+;; JVM options required for in-process node
  :aliases {:xtdb {:jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
                              "-Dio.netty.tryReflectionSetAccessible=true"]}}}
