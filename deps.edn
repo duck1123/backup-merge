@@ -29,4 +29,7 @@
    :main-opts  ["-m" "eastwood.lint" {:exclude-linters [:unused-meta-on-macro]}]}
 
   :xtdb {:jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
-                    "-Dio.netty.tryReflectionSetAccessible=true"]}}}
+                    "-Dio.netty.tryReflectionSetAccessible=true"]}
+
+  :uberjar {:extra-deps {uberdeps/uberdeps {:mvn/version "1.4.0"}}
+            :main-opts  ["-m" "uberdeps.uberjar"]}}}

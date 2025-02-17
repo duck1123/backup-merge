@@ -116,10 +116,10 @@
          {:on-click #(swap! !state update-in path not)}
          (if (get-in @!state path) "stop" "start")]))})
 
-(def s1 (:rows (bm/process-file f1)))
-(def s2 (:rows (bm/process-file f2)))
-(def i1 (set/intersection s1 s2))
-(def target-id (first i1))
+;; (def s1 (:rows (bm/process-file f1)))
+;; (def s2 (:rows (bm/process-file f2)))
+;; (def i1 (set/intersection s1 s2))
+;; (def target-id (first i1))
 
 (defn number-spinner
   "Displays a spinner for adjusting a value at path"
@@ -128,8 +128,8 @@
    [:li (clerk/with-viewer increase-file-counter-viewer path)]
    [:li (clerk/with-viewer decrease-file-counter-viewer path)]])
 
-(def target-event (get-in @!state [:filters :event]))
-(def target-pubkey (get-in @!state [:filters :pubkey]))
+;; (def target-event (get-in @!state [:filters :event]))
+;; (def target-pubkey (get-in @!state [:filters :pubkey]))
 
 (defn format-e
   [event]
@@ -171,7 +171,7 @@
   #_[:pre [:code (str e)]])
 
 (defn db-viewer
-  []
+  [target-pubkey target-event]
   (let [started?    (bm/db-started?)
         event-count (bm/count-all target-pubkey)
         db-events   (bm/get-db-events target-event target-pubkey)]
@@ -198,10 +198,19 @@
      [:div (map #(v/with-viewer nu/nostr-event-viewer %) trimmed-events)]]))
 
 (defn file-diff
-  []
+  [s1 s2 i1]
   [["In Both"   (count i1)]
    ["In File A" (count (set/difference s1 i1))]
    ["In File B" (count (set/difference s2 i1))]])
+
+(defn file-diff2
+  [state]
+  (let [f1 (:file-a @state)
+        f2 (:file-b @state)
+        s1 (:rows (bm/process-file f1))
+        s2 (:rows (bm/process-file f2))
+        i1 (set/intersection s1 s2)]
+    (file-diff s1 s2 i1)))
 
 (defn file-picker
   []
@@ -308,7 +317,7 @@
         top-level-content (->> (:content page)
                                identity
                                #_(take 7))]
-    [:div#page {:style {:border "1px solid white"
+    [:div#page {:style {:border  "1px solid white"
                         :padding "2px"}}
      [:h1#page-title page-title]
      [:h2#page-id page-id]
@@ -374,26 +383,26 @@
 
 (clerk/code @!state)
 
-;; (clerk/table (file-diff))
+;; (clerk/table (file-diff2 !state))
 
 ;; ^{::clerk/no-cache true}
-;; (clerk/html (db-viewer))
+;; (clerk/html (db-viewer target-pubkey target-event))
 
 ;; ^{::clerk/viewer clerk/html ::clerk/no-cache true}
 ;; (org-directory-viewer)
 
-^{::clerk/viewer clerk/html ::clerk/no-cache true}
-(org-daily-directory-viewer)
+;; ^{::clerk/viewer clerk/html ::clerk/no-cache true}
+;; (org-daily-directory-viewer)
 
-^{::clerk/viewer clerk/html ::clerk/no-cache true}
-(process-page (:org-path @!state))
+;; ^{::clerk/viewer clerk/html ::clerk/no-cache true}
+;; (process-page (:org-path @!state))
 
 ^{::clerk/visibility {:code :hide :result :hide}}
 (comment
 
   (bm/event-query)
 
-  (bm/get-db-events target-event target-pubkey)
+  ;; (bm/get-db-events target-event target-pubkey)
 
   (let [q '(-> (from :events [*]) (aggregate {:c (row-count)}))]
     (xt/q bm/node q))
@@ -428,8 +437,8 @@
 
   (bm/all-ids)
 
-  (bm/find-event-in-file f1 target-id)
-  (bm/find-event-in-file f2 target-id)
+  ;; (bm/find-event-in-file f1 target-id)
+  ;; (bm/find-event-in-file f2 target-id)
 
   (clerk/show! "src/notebooks/backup_merge/core_notebook.clj")
 

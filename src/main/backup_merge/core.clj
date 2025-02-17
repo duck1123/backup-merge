@@ -9,7 +9,8 @@
    [nrepl.server :as nrepl]
    [taoensso.timbre :as log]
    [xtdb.api :as xt]
-   [xtdb.node :as xtn]))
+   [xtdb.node :as xtn])
+  (:gen-class))
 
 ;; [Notebook](../../notebooks/backup_merge/core_notebook.clj)
 
@@ -301,6 +302,7 @@
 
 (defn -main
   [& args1]
+  (println "starting main")
   (prn args1)
   (prn *command-line-args*)
   (let [[args] args1]
