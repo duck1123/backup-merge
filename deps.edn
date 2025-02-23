@@ -32,7 +32,14 @@
 
   :eastwood
   {:extra-deps {jonase/eastwood {:mvn/version "1.4.3"}}
-   :main-opts  ["-m" "eastwood.lint" {:exclude-linters [:unused-meta-on-macro]}]}
+   :main-opts  ["-m" "eastwood.lint"
+                {:source-paths    ["src/babashka"
+                                   "src/main"
+                                   "src/nbb"
+                                   "src/notebooks"]
+                 :linters         [:all]
+                 :exclude-linters [:keyword-typos
+                                   :unused-meta-on-macro]}]}
 
   :xtdb {:jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
                     "-Dio.netty.tryReflectionSetAccessible=true"]}

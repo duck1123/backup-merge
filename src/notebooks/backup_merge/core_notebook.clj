@@ -1,6 +1,5 @@
 ^{:nextjournal.clerk/visibility {:code :hide}}
 (ns backup-merge.core-notebook
-  ;; {:nextjournal.clerk/toc true}
   (:require
    [babashka.fs :as fs]
    [backup-merge.core :as bm]
@@ -142,7 +141,7 @@
       (clerk/with-viewer filter-pubkey-viewer pubkey)]
      [:p kind]
      [:p content]
-     [:p (str (java.sql.Timestamp. (* created-at 1000)))]
+     [:p (str (java.sql.Timestamp. (* (int created-at) (int 1000))))]
      [:p sig]
      (when (seq others)
        [:p [:code [:pre (str others)]]])
@@ -228,7 +227,7 @@
   [:div.border-red.border-1
    [:div {}
     [:div {} (str "Backup Page " (:backup-page @!state) " / "
-                  (int (Math/ceil (/ (count backup-files) (:backup-file-lines @!state)))))]
+                  (int (Math/ceil (/ (count backup-files) (int (:backup-file-lines @!state))))))]
     [:div {} (number-spinner [:backup-page])]]
    [:div {}
     [:div {} (str "Backup File Lines " (:backup-file-lines @!state) " / " (count backup-files))]
@@ -237,6 +236,8 @@
 (declare process-content)
 
 (def at true)
+
+(def show-content-item true)
 
 (defn process-content-item
   [content-item]
@@ -251,7 +252,7 @@
              [:a {:href (str "#" uri)}
               [:div #_"link: " (map process-content-item content)]]
              #_[:pre#link-content [:code (pr-str content-item)]]]
-            (->> [(when-not (and at (#{:p #_:link :listitem} type))
+            (->> [(when-not (and show-content-item (#{:p #_:link :listitem} type))
                     [:pre#ca-pre [:code (pr-str content-item)]])
                   (when (#{:list} type)
                     [:p "list Level: " listlevel])
@@ -293,13 +294,13 @@
           (when-not (#{:headline} type)
             [:p "Type: " (str type)])
           (when created [:p "Created: " created])
-          [:pre#c-pre
-           [:code
-            (pr-str
-             (-> c
-                 identity
-                 #_(dissoc :text :type :todo :tags :content)
-                 #_(update :properties #(dissoc % :created))))]]
+           [:pre#c-pre
+            [:code
+             (pr-str
+              (-> c
+                  identity
+                  #_(dissoc :text :type :todo :tags :content)
+                  #_(update :properties #(dissoc % :created))))]]
           [:div#entry-content
            #_[:pre [:code (pr-str content)]]
            (process-content content)]]
@@ -315,9 +316,8 @@
         page-title        (get-in page [:attribs :title])
         page-id           (get-in page [:properties :id])
         top-level-content (->> (:content page)
-                               identity
                                #_(take 7))]
-    [:div#page {:style {:border  "1px solid white"
+     [:div#page {:style {:border "1px solid white"
                         :padding "2px"}}
      [:h1#page-title page-title]
      [:h2#page-id page-id]
