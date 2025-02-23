@@ -1,1 +1,49 @@
-{:paths ["src/babashka"]}
+{:paths ["src/babashka"]
+
+ :tasks
+ {check
+  {:doc     "Check formatting of code"
+   :depends [cljfmt]}
+
+  ci-all
+  {:doc     "Run comprehensive local validation"
+   :depends [lint eastwood test]}
+
+  ci-local
+  {:doc     "Run local validation checks"
+   :depends [lint test]}
+
+  clean
+  {:doc "Remove generated resources"
+   :task
+   (do
+     (shell "sh -c \"rm -rf classes/*\"")
+     (shell "rm -rf target")
+     (shell "sh -c \"rm -rf .clerk/cache/*\""))}
+
+  cljfmt
+  {:doc  "Check formatting of code using cljfmt"
+   :task (shell "clojure -M:cljfmt")}
+
+  eastwood
+  {:doc  "Validate Code with eastwood"
+   :task (shell "clojure -M:eastwood")}
+
+  format
+  {:doc  "Fix all formatting errors"
+   :task (shell "clojure -M:cljfmt/fix")}
+
+  kondo
+  {:doc  "Validate code with kondo"
+   :task (shell "clojure -M:kondo src test notebooks")}
+
+  lint
+  {:doc     "Check all code issues"
+   :depends [check validate]}
+
+  test
+  {:task (shell "true")}
+
+  validate
+  {:doc     "Check for coding violations"
+   :depends [kondo eastwood]}}}

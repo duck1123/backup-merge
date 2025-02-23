@@ -10,10 +10,23 @@
   io.github.nextjournal/clerk       {:mvn/version "0.17.1102"}
   mount/mount                       {:mvn/version "0.1.20"}
   org.postgresql/postgresql         {:mvn/version "42.7.4"}
-  io.github.bnbeckwith/orgmode      {:local/root "../orgmode"
+  io.github.bnbeckwith/orgmode      {:local/root  "../orgmode"
                                      #_#_:git/url "https://github.com/bnbeckwith/orgmode"
                                      #_#_:sha     "39bfb27f33c9caee1233c338bdcea0045861ec3c"}}
 
 ;; JVM options required for in-process node
- :aliases {:xtdb {:jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
-                             "-Dio.netty.tryReflectionSetAccessible=true"]}}}
+ :aliases
+ {:cljfmt
+  {:extra-deps {cljfmt/cljfmt {:mvn/version "0.9.2"}}
+   :main-opts  ["-m" "cljfmt.main" "--indents" "indentation.clj" "check" "src"]}
+
+  :cljfmt/fix
+  {:extra-deps {cljfmt/cljfmt {:mvn/version "0.9.2"}}
+   :main-opts  ["-m" "cljfmt.main" "fix" "src"]}
+
+  :eastwood
+  {:extra-deps {jonase/eastwood {:mvn/version "1.4.3"}}
+   :main-opts  ["-m" "eastwood.lint"]}
+
+  :xtdb {:jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
+                    "-Dio.netty.tryReflectionSetAccessible=true"]}}}

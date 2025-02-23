@@ -5,6 +5,7 @@
 /.clj-kondo/inline-configs/
 /.cpcache/
 /.direnv/
+/.eastwood
 /.envrc
 /.lsp/
 /.portal/
