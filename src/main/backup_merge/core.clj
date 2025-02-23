@@ -109,8 +109,7 @@
                                                     tags)]
                                       {:tag-docs tag-docs :events [(assoc
                                                                     (dissoc event :tags)
-                                                                    :xt/id id
-                                                                    )]}))
+                                                                    :xt/id id)]}))
         {:keys [events tag-docs]} (reduce
                                    (fn [acc i]
                                      {:tag-docs (mapcat :tag-docs [acc i])
@@ -159,8 +158,7 @@
 
     (xt/q node '(-> (from :tags [*])
                     (limit 5)))
-    [])
-  )
+    []))
 
 (defn get-trimmed-files
   [!state backup-files]
