@@ -210,7 +210,7 @@
   [!state backup-files]
   (let [{:keys [backup-file-lines backup-page]} @!state]
     (->> backup-files
-         (drop (* (dec backup-page) backup-file-lines))
+         (drop (* (int (dec backup-page)) (int backup-file-lines)))
          (take backup-file-lines)
          (map str))))
 
