@@ -15,6 +15,38 @@
 
 (def base-path "../../org-roam/")
 
+(def ?timestamp
+  [:map {:closed true}
+   [:active :boolean]
+   [:date :time/datetime]])
+
+(def ?entry
+  [:map {:closed true}
+   [:headline :string]
+   [:todo :string]
+   [:tags [:every :string]]
+   [:scheduled ::timestamp]
+   [:closed ::timestamp]
+   [:priority :string]])
+
+(def ?page
+  [:map {:closed true}
+   [:id :string]
+   [:title :string]
+   [:entries [:every ::entry]]])
+
+(defn parse-date
+  [date]
+  (fs/path base-path "daily" (str date ".org")))
+
+(comment
+
+  base-path
+
+  (parse-date "2022-03-26")
+
+  #_|)
+
 (def xtdb-opts
   {:log     [:local {:path "tx-log"}]
    :storage [:local {:path "storage"}]})
