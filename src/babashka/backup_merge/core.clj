@@ -1,5 +1,6 @@
 (ns backup-merge.core
   (:require
+   [babashka.fs :as fs]
    [babashka.process :refer [shell]]
    [cheshire.core :as json]
    [clojure.java.io :as io]
@@ -8,6 +9,38 @@
 (def default-clerk-port 7777)
 (def default-nrepl-port 7000)
 (def nbb-src "src/nbb")
+
+(def ?timestamp
+  [:map {:closed true}
+   [:active :boolean]
+   [:date :time/datetime]])
+
+(def ?entry
+  [:map {:closed true}
+   [:headline :string]
+   [:todo :string]
+   [:tags [:every :string]]
+   [:scheduled ::timestamp]
+   [:closed ::timestamp]
+   [:priority :string]])
+
+(def ?page
+  [:map {:closed true}
+   [:id :string]
+   [:title :string]
+   [:entries [:every ::entry]]])
+
+(defn parse-date
+  [date]
+  (fs/path base-path "daily" (str date ".org")))
+
+(comment
+
+  base-path
+
+  (parse-date "2022-03-26")
+
+  #_|)
 
 (defn execute-clojure
   [f args]

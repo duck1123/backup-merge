@@ -321,6 +321,7 @@
                         :padding "2px"}}
      [:h1#page-title page-title]
      [:h2#page-id page-id]
+     [:pre [:code (pr-str page)]]
      (->> top-level-content
           (map process-entry)
           (into [:div#entry-list]))]))
