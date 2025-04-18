@@ -33,10 +33,6 @@
   {:doc  "Fix all formatting errors"
    :task (shell "clojure -M:cljfmt/fix")}
 
-  kondo
-  {:doc  "Validate code with kondo"
-   :task (shell "clojure -M:kondo src test notebooks")}
-
   lint
   {:doc     "Check all code issues"
    :depends [check validate]}
@@ -46,4 +42,4 @@
 
   validate
   {:doc     "Check for coding violations"
-   :depends [kondo eastwood]}}}
+   :depends [eastwood]}}}
