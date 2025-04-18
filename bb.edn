@@ -1,13 +1,19 @@
 {:paths ["src/babashka"]
 
  :tasks
- {check
+ {build
+  {:task (shell "nix build .")}
+
+  check
   {:doc     "Check formatting of code"
    :depends [cljfmt]}
 
+  ci
+  {:depends [ci-all]}
+
   ci-all
   {:doc     "Run comprehensive local validation"
-   :depends [lint eastwood test]}
+   :depends [lint eastwood test update-deps-lock build]}
 
   ci-local
   {:doc     "Run local validation checks"
@@ -39,6 +45,9 @@
 
   test
   {:task (shell "true")}
+
+  update-deps-lock
+  {:task (shell "nix run github:jlesquembre/clj-nix#deps-lock")}
 
   validate
   {:doc     "Check for coding violations"
