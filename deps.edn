@@ -10,9 +10,9 @@
   io.github.nextjournal/clerk       {:mvn/version "0.17.1102"}
   mount/mount                       {:mvn/version "0.1.20"}
   org.postgresql/postgresql         {:mvn/version "42.7.4"}
-  io.github.bnbeckwith/orgmode      {:local/root  "../orgmode"
-                                     #_#_:git/url "https://github.com/bnbeckwith/orgmode"
-                                     #_#_:sha     "39bfb27f33c9caee1233c338bdcea0045861ec3c"}}
+  io.github.bnbeckwith/orgmode      {#_#_:local/root "../orgmode"
+                                     :git/url        "https://github.com/duck1123/orgmode"
+                                     :git/sha        "02c39e2b8827eef590741ac3313630778e6e37a8"}}
 
 ;; JVM options required for in-process node
  :aliases
@@ -26,7 +26,7 @@
 
   :eastwood
   {:extra-deps {jonase/eastwood {:mvn/version "1.4.3"}}
-   :main-opts  ["-m" "eastwood.lint"]}
+   :main-opts  ["-m" "eastwood.lint" {:exclude-linters [:unused-meta-on-macro]}]}
 
   :xtdb {:jvm-opts ["--add-opens=java.base/java.nio=ALL-UNNAMED"
                     "-Dio.netty.tryReflectionSetAccessible=true"]}}}

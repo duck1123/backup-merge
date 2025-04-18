@@ -227,6 +227,8 @@
 
 (declare process-content)
 
+(def at true)
+
 (defn process-content-item
   [content-item]
   (if (string? content-item)
@@ -240,7 +242,7 @@
              [:a {:href (str "#" uri)}
               [:div #_"link: " (map process-content-item content)]]
              #_[:pre#link-content [:code (pr-str content-item)]]]
-            (->> [(when-not (and true (#{:p #_:link :listitem} type))
+            (->> [(when-not (and at (#{:p #_:link :listitem} type))
                     [:pre#ca-pre [:code (pr-str content-item)]])
                   (when (#{:list} type)
                     [:p "list Level: " listlevel])
@@ -286,6 +288,7 @@
            [:code
             (pr-str
              (-> c
+                 identity
                  #_(dissoc :text :type :todo :tags :content)
                  #_(update :properties #(dissoc % :created))))]]
           [:div#entry-content
@@ -303,6 +306,7 @@
         page-title        (get-in page [:attribs :title])
         page-id           (get-in page [:properties :id])
         top-level-content (->> (:content page)
+                               identity
                                #_(take 7))]
     [:div#page {:style {:border "1px solid white"
                         :padding "2px"}}

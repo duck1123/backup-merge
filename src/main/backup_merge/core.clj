@@ -64,7 +64,8 @@
 
 (defn db-started?
   []
-  (.isRealized (mount/->DerefableState (str #'node))))
+  (let [ds ^clojure.lang.IPending (mount/->DerefableState (str #'node))]
+    (.isRealized ds)))
 
 (clerk/example
  (db-started?))
