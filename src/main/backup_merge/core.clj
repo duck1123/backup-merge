@@ -7,6 +7,7 @@
    [mount.core :as mount :refer [defstate]]
    [nextjournal.clerk :as clerk]
    [nrepl.server :as nrepl]
+   [orgmode.core :as org]
    [taoensso.timbre :as log]
    [xtdb.api :as xt]
    [xtdb.node :as xtn])
@@ -299,6 +300,13 @@
   (loop []
     (Thread/sleep (* 3600 1000))
     (recur)))
+
+(defn parse-org-file
+  [& [args]]
+  (let [date (get args '--date)
+        file (fs/real-path (fs/absolutize (fs/path base-path  "daily" (str    date ".org"))))]
+    #_(println "File: " file)
+    (prn (org/parse (str file)))))
 
 (defn list-daily-org-files
   [& [args]]

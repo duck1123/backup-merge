@@ -13,10 +13,10 @@
   (let [base-args ["clojure"
                    (str "-Axtdb")
                    (str "-X " f)]
-        arg-args  (map (fn [[k v]] (str "--" (name k) " " v)) args)
+        arg-args  (map (fn [[k v]] (str "--" (name k) " " "\"" v "\"")) args)
         cli-args  (apply conj base-args arg-args)
         cmd       (str/join " " cli-args)]
-    #_(println cmd)
+    #_(binding [*out* *err*] (println cmd))
     (:exit (shell cmd))))
 
 (defn execute-nbb
@@ -68,6 +68,13 @@
   (let [f "backup-merge.core/list-daily-org-files"
         opts {}]
     (execute-clojure f opts)))
+
+(defn parse-org-file
+  [& [args]]
+  (let [f    "backup-merge.core/parse-org-file"
+        opts {:date (str "\\\"" (:date args) "\\\"")}]
+    (execute-clojure f opts)))
+
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (def CONFIGURATION
   {:app
@@ -125,4 +132,9 @@
      :short       "o"
      :subcommands [{:command     "list-daily"
                     :description "list daily org files"
-                    :runs        list-daily-org-files}]}]})
+                    :runs        list-daily-org-files}
+                   {:command     "parse"
+                    :description "parse org file by date"
+                    :opts        [{:option "date"
+                                   :type   :string}]
+                    :runs        parse-org-file}]}]})
