@@ -32,19 +32,11 @@
         tag = "latest";
         copyToRoot = pkgs.buildEnv {
           name = "clojure-app-env";
-          paths = with pkgs; [
-            bash
-            coreutils
-            nushell
-            openjdk
-            clojureProject
-          ];
+          paths = with pkgs; [ bash coreutils nushell openjdk clojureProject ];
         };
         config = {
           Cmd = [ "${clojureProject}/bin/backup-merge" ];
-          Env = [
-            "USER=backup-merge"
-          ];
+          Env = [ "USER=backup-merge" ];
           WorkinDir = "/app";
         };
       };
