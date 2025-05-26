@@ -300,6 +300,14 @@
     (Thread/sleep (* 3600 1000))
     (recur)))
 
+(defn list-daily-org-files
+  [& [args]]
+  (let [files (->> (get-org-daily-files)
+                   (map fs/file-name)
+                   (map #(str (subs % 0 10) ".org"))
+                   sort)]
+    (println (str/join "\n" files))))
+
 (defn -main
   [& args1]
   (println "starting main")

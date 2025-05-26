@@ -63,6 +63,11 @@
         opts {:clerk-port clerk-port :nrepl-port nrepl-port}]
     (execute-clojure f opts)))
 
+(defn list-daily-org-files
+  [& [args]]
+  (let [f "backup-merge.core/list-daily-org-files"
+        opts {}]
+    (execute-clojure f opts)))
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (def CONFIGURATION
   {:app
@@ -114,4 +119,10 @@
        :runs        merge-files}
       {:command     "jsonl"
        :description "merge jsonl backups"
-       :runs        merge-jsonl}]}]})
+       :runs        merge-jsonl}]}
+    {:command     "org"
+     :description "org files"
+     :short       "o"
+     :subcommands [{:command     "list-daily"
+                    :description "list daily org files"
+                    :runs        list-daily-org-files}]}]})
