@@ -187,4 +187,5 @@
     clerk-configuration
     convert-configuration
     merge-configuration
+    nostr-configuration
     org-configuration]})

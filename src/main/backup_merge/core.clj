@@ -350,6 +350,12 @@
 
     (println (str/join "\n" files))))
 
+(defn list-backup-files
+  [& [args]]
+  (let [files (->> (get-backup-files)
+                   (map fs/file-name))]
+    (println (str/join "\n" files))))
+
 (defn -main
   [& args1]
   (println "starting main")
