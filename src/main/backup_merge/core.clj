@@ -221,6 +221,10 @@
   []
   (map fs/canonicalize (fs/list-dir org-daily-data-path)))
 
+(defn get-org-topic-files
+  []
+  (map fs/canonicalize (fs/list-dir org-data-path)))
+
 (defn toggle-db-connection
   [!state _state]
   (let [{{:keys [expected actual]} :xtdb} @!state
@@ -324,6 +328,12 @@
   (let [files (->> (get-org-daily-files)
                    (map fs/file-name)
                    (map #(str (subs % 0 10) #_".org"))
+                   sort)]
+    (println (str/join "\n" files))))
+
+(defn list-org-topic-files
+  [& [args]]
+  (let [files (->> (get-org-topic-files)
                    sort)]
     (println (str/join "\n" files))))
 

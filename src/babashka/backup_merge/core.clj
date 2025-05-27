@@ -69,6 +69,12 @@
         opts {}]
     (execute-clojure f opts)))
 
+(defn list-org-topic-files
+  [& [args]]
+  (let [f "backup-merge.core/list-org-topic-files"
+        opts {}]
+    (execute-clojure f opts)))
+
 (defn fetch-org-file
   [& [args]]
   (let [f    "backup-merge.core/fetch-org-file"
@@ -145,6 +151,9 @@
                  {:command     "list-daily"
                   :description "list daily org files"
                   :runs        list-daily-org-files}
+                 {:command     "list-topics"
+                  :description "list org topic files"
+                  :runs        list-org-topic-files}
                  {:command     "parse"
                   :description "parse org file by date"
                   :opts        [{:option "date"
