@@ -301,10 +301,21 @@
     (Thread/sleep (* 3600 1000))
     (recur)))
 
+(defn daily-file
+  [date]
+  (fs/real-path (fs/absolutize (fs/path base-path "daily" (str date ".org")))))
+
+(defn fetch-org-file
+  [& [args]]
+  (let [date (get args '--date)
+        file (daily-file date)]
+    #_(println "File: " file)
+    (println (slurp (str file)))))
+
 (defn parse-org-file
   [& [args]]
   (let [date (get args '--date)
-        file (fs/real-path (fs/absolutize (fs/path base-path  "daily" (str    date ".org"))))]
+        file (daily-file date)]
     #_(println "File: " file)
     (prn (org/parse (str file)))))
 
@@ -312,7 +323,7 @@
   [& [args]]
   (let [files (->> (get-org-daily-files)
                    (map fs/file-name)
-                   (map #(str (subs % 0 10) ".org"))
+                   (map #(str (subs % 0 10) #_".org"))
                    sort)]
     (println (str/join "\n" files))))
 

@@ -69,6 +69,12 @@
         opts {}]
     (execute-clojure f opts)))
 
+(defn fetch-org-file
+  [& [args]]
+  (let [f    "backup-merge.core/fetch-org-file"
+        opts {:date (str "\\\"" (:date args) "\\\"")}]
+    (execute-clojure f opts)))
+
 (defn parse-org-file
   [& [args]]
   (let [f    "backup-merge.core/parse-org-file"
@@ -130,7 +136,12 @@
     {:command     "org"
      :description "org files"
      :short       "o"
-     :subcommands [{:command     "list-daily"
+     :subcommands [{:command "fetch"
+                    :description "Fetch a daily file"
+                    :opts        [{:option "date"
+                                   :type   :string}]
+                    :runs        fetch-org-file}
+                   {:command     "list-daily"
                     :description "list daily org files"
                     :runs        list-daily-org-files}
                    {:command     "parse"
