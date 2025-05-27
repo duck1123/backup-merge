@@ -57,6 +57,10 @@
       #_(doseq [v (take 5 events)]
           (println (get v "id"))))))
 
+(defn clojure-command
+  [s]
+  (fn [& [args]] (execute-clojure (str s) args)))
+
 (defn start-clerk
   [{:keys [clerk-port nrepl-port]}]
   (let [f    "backup-merge.core/clerk-command"
@@ -152,7 +156,11 @@
    :subcommands
    [{:command "list-backups"
      :description "list backup files"
-     :runs list-backup-files}]})
+     :runs list-backup-files}
+    {:command "parse"
+     :description "parse a backup file"
+     :opts [{:option "file" :type :string}]
+     :runs (clojure-command `parse)}]})
 
 (def org-configuration
   {:command     "org"

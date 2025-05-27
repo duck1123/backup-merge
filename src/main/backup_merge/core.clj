@@ -356,6 +356,12 @@
                    (map fs/file-name))]
     (println (str/join "\n" files))))
 
+(defn parse
+  [& [args]]
+  (debug (str "parsing: " args))
+  (let [response {}]
+    (println response)))
+
 (defn -main
   [& args1]
   (println "starting main")
