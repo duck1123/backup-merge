@@ -15,7 +15,7 @@
 
 ;; [Notebook](../../notebooks/backup_merge/core_notebook.clj)
 
-(def base-path "../../org-roam/")
+(def base-path (or (System/getenv "ORG_HOME") "../../org-roam/"))
 
 (def ?timestamp
   [:map {:closed true}
@@ -359,8 +359,10 @@
 (defn parse
   [& [args]]
   (debug (str "parsing: " args))
-  (let [response {}]
-    (println response)))
+  (let [file (get args '--file)]
+
+    (let [response {:file file}]
+     (println response))))
 
 (defn -main
   [& args1]

@@ -17,7 +17,7 @@
         arg-args  (map (fn [[k v]] (str "--" (name k) " " "\"" v "\"")) args)
         cli-args  (apply conj base-args arg-args)
         cmd       (str/join " " cli-args)]
-    #_(binding [*out* *err*] (println cmd))
+    (binding [*out* *err*] (println cmd))
     (:exit (shell cmd))))
 
 (defn execute-nbb
@@ -58,8 +58,9 @@
           (println (get v "id"))))))
 
 (defn clojure-command
-  [s]
-  (fn [& [args]] (execute-clojure (str s) args)))
+  ([s] (clojure-command s identity))
+  ([s f]
+   (fn [& [args]] (execute-clojure (str s) (f args)))))
 
 (defn start-clerk
   [{:keys [clerk-port nrepl-port]}]
@@ -149,18 +150,24 @@
      :description "merge jsonl backups"
      :runs        merge-jsonl}]})
 
+(defn debug
+  [s]
+  (binding [*out* *err*] (println s)))
+
 (def nostr-configuration
-  {:command "nostr"
-   :short "n"
+  {:command     "nostr"
+   :short       "n"
    :description "nostr commands"
    :subcommands
-   [{:command "list-backups"
+   [{:command     "list-backups"
      :description "list backup files"
-     :runs list-backup-files}
-    {:command "parse"
+     :runs        list-backup-files}
+    {:command     "parse"
      :description "parse a backup file"
-     :opts [{:option "file" :type :string}]
-     :runs (clojure-command `parse)}]})
+     :opts        [{:option "file" :type :string}]
+     :runs        (clojure-command `parse (fn [m]
+                                            (debug (str "m: " m))
+                                            {:file (get m :file  #_'--file "\\\"\\\"")}))}]})
 
 (def org-configuration
   {:command     "org"
