@@ -7,11 +7,12 @@
 
 (def default-clerk-port 7777)
 (def default-nrepl-port 7000)
+(def nbb-src "src/nbb")
 
 (defn execute-clojure
   [f args]
   (let [base-args ["clojure"
-                   (str "-Axtdb")
+                   "-Axtdb"
                    (str "-X " f)]
         arg-args  (map (fn [[k v]] (str "--" (name k) " " "\"" v "\"")) args)
         cli-args  (apply conj base-args arg-args)
@@ -21,9 +22,8 @@
 
 (defn execute-nbb
   [f args]
-  (let [src-path "src/nbb"
-        base-args ["npx nbb"
-                   (str "-cp " src-path)
+  (let [base-args ["npx nbb"
+                   (str "-cp " nbb-src)
                    (str "-x " f)]
         arg-args  (map (fn [[k v]] (str "--" (name k) " " v)) args)
         cli-args  (apply conj base-args arg-args)
