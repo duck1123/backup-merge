@@ -305,8 +305,13 @@
     (Thread/sleep (* 3600 1000))
     (recur)))
 
+(defn debug
+  [data]
+  (binding [*out* *err*] (println data)))
+
 (defn daily-file
   [date]
+  (debug date)
   (fs/real-path (fs/absolutize (fs/path base-path "daily" (str date ".org")))))
 
 (defn fetch-org-file
@@ -334,7 +339,15 @@
 (defn list-org-topic-files
   [& [args]]
   (let [files (->> (get-org-topic-files)
-                   sort)]
+                   (filter fs/regular-file?)
+                   sort
+                   (map fs/file-name)
+                   (map (fn [n]
+                          (let [[date rest] (str/split n  #"-")]
+                            (when rest
+                              (let [[name _rest] (str/split rest #"\.")]
+                                {:date date :name name}))))))]
+
     (println (str/join "\n" files))))
 
 (defn -main
