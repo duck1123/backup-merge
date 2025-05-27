@@ -90,6 +90,7 @@
   (ns-resolve 'cider.nrepl 'cider-nrepl-handler))
 
 (defn start-services!
+  "Start servers"
   [options]
   (when-let [clerk-port (::clerk-port options)]
     (clerk/serve!
@@ -106,12 +107,14 @@
      :handler (nrepl-handler))))
 
 (defn parse-file
+  "parse a nostr backup file"
   [file-name]
   (let [reader (io/reader file-name)
         events (json/parsed-seq reader keyword)]
     events))
 
 (defn merge-jsonl
+  "Merge two jsonl files together"
   [& [args]]
   (doseq [in (:_arguments args)]
     (let [reader (io/reader in)
@@ -121,6 +124,7 @@
           (println (get v "id"))))))
 
 (defn insert-events
+  "create insert statements for events"
   [events]
   [(into [:put-docs {:into :events}]
          (for [event events]
@@ -128,35 +132,39 @@
              (assoc event :xt/id id))))])
 
 (defn load-file!
+  "Load backup file into database"
   [file-name]
   (log/info "Loading file" file-name)
-  (let [rows                      (take 5 (parse-file file-name))
-        pairs                     (for [{:keys [id tags] :as event} rows]
-                                    (let [tag-docs (map-indexed
-                                                    (fn [position tag]
-                                                      (let [[tag-key value & others] tag]
-                                                        {:xt/id    (str id ":" position)
-                                                         :event-id id
-                                                         :position position
-                                                         :tag      tag-key
-                                                         :value    value
-                                                         :others   others}))
-                                                    tags)]
-                                      {:tag-docs tag-docs :events [(assoc
-                                                                    (dissoc event :tags)
-                                                                    :xt/id id)]}))
-        {:keys [events tag-docs]} (reduce
-                                   (fn [acc i]
-                                     {:tag-docs (mapcat :tag-docs [acc i])
-                                      :events   (mapcat :events [acc i])})
-                                   {:tag-docs [] :events []}
-                                   pairs)
-        stmts                     [(into [:put-docs {:into :tags}] tag-docs)
-                                   (into [:put-docs {:into :events}] events)]]
+  (let [rows         (take 5 (parse-file file-name))
+        pairs        (for [{:keys [id tags] :as event} rows]
+                       (let [tag-docs (map-indexed
+                                       (fn [position tag]
+                                         (let [[tag-key value & others] tag]
+                                           {:xt/id    (str id ":" position)
+                                            :event-id id
+                                            :position position
+                                            :tag      tag-key
+                                            :value    value
+                                            :others   others}))
+                                       tags)]
+                         {:tag-docs tag-docs :events [(assoc
+                                                       (dissoc event :tags)
+                                                       :xt/id id)]}))
+        {:keys
+         [events
+          tag-docs]} (reduce
+                      (fn [acc i]
+                        {:tag-docs (mapcat :tag-docs [acc i])
+                         :events   (mapcat :events [acc i])})
+                      {:tag-docs [] :events []}
+                      pairs)
+        stmts        [(into [:put-docs {:into :tags}] tag-docs)
+                      (into [:put-docs {:into :events}] events)]]
     (log/info "stmts" stmts)
     (xt/execute-tx node stmts)))
 
 (defn all-ids
+  "Fetch all events in the database"
   []
   (map :id (xt/q node '(from :events [{:xt/id id}]))))
 
@@ -164,12 +172,14 @@
  (all-ids))
 
 (defn purge-db!
+  "Purge all events from database"
   []
   (let [q [(into [:erase-docs :events] (all-ids))]]
     (xt/execute-tx node q)
     #_q))
 
 (defn event-query
+  "Returns a query for fetching a query"
   []
   '(-> (from :events [*])
        (where
@@ -179,6 +189,7 @@
        (limit 5)))
 
 (defn get-db-events
+  "Query the db for a pubkey or an event"
   [target-event target-pubkey]
   (if (db-started?)
     (let [q (event-query)]
@@ -205,7 +216,7 @@
 
 (defn get-trimmed-events
   [!state f1]
-  (let [events (parse-file f1)
+  (let [events      (parse-file f1)
         event-count (:event-count @!state)]
     (take event-count events)))
 
@@ -329,6 +340,7 @@
     (prn (org/parse (str file)))))
 
 (defn list-daily-org-files
+  "List all dates where an org daily file exists"
   [& [args]]
   (let [files (->> (get-org-daily-files)
                    (map fs/file-name)
@@ -337,6 +349,7 @@
     (println (str/join "\n" files))))
 
 (defn list-org-topic-files
+  "List all topic files in the org directory"
   [& [args]]
   (let [files (->> (get-org-topic-files)
                    (filter fs/regular-file?)
@@ -347,10 +360,10 @@
                             (when rest
                               (let [[name _rest] (str/split rest #"\.")]
                                 {:date date :name name}))))))]
-
     (println (str/join "\n" files))))
 
 (defn list-backup-files
+  "List all backup files in data directory"
   [& [args]]
   (let [files (->> (get-backup-files)
                    (map fs/file-name))]
