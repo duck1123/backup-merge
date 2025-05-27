@@ -24,12 +24,12 @@
 
 (def ?entry
   [:map {:closed true}
-   [:headline :string]
-   [:todo :string]
-   [:tags [:every :string]]
+   [:headline  :string]
+   [:todo      :string]
+   [:tags      [:every :string]]
    [:scheduled ::timestamp]
-   [:closed ::timestamp]
-   [:priority :string]])
+   [:closed    ::timestamp]
+   [:priority  :string]])
 
 (def ?page
   [:map {:closed true}

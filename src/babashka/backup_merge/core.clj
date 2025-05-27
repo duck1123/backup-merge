@@ -75,6 +75,12 @@
         opts {}]
     (execute-clojure f opts)))
 
+(defn list-backup-files
+  [& [args]]
+  (let [f "backup-merge.core/list-backup-files"
+        opts {}]
+    (execute-clojure f opts)))
+
 (defn fetch-org-file
   [& [args]]
   (let [f    "backup-merge.core/fetch-org-file"
@@ -138,6 +144,15 @@
     {:command     "jsonl"
      :description "merge jsonl backups"
      :runs        merge-jsonl}]})
+
+(def nostr-configuration
+  {:command "nostr"
+   :short "n"
+   :description "nostr commands"
+   :subcommands
+   [{:command "list-backups"
+     :description "list backup files"
+     :runs list-backup-files}]})
 
 (def org-configuration
   {:command     "org"
