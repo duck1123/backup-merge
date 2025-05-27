@@ -52,15 +52,16 @@
       bm = pkgs.runCommand "bm" {
         nativeBuildInputs = [ deps-cache pkgs.babashka pkgs.git pkgs.tree ];
       } ''
+        mkdir -p $TMPDIR/cpcache
+        mkdir -p $out/bin
+        export CLJ_CACHE=$TMPDIR/cpcache
         export HOME=${deps-cache}
         export JAVA_TOOL_OPTIONS="-Duser.home=${deps-cache}"
-        mkdir -p $TMPDIR/cpcache
-        export CLJ_CACHE=$TMPDIR/cpcache
-        mkdir -p $out/bin
         cd ${projectSrc}
         substitute ./bm $out/bin/bm \
           --replace-fail "#!/usr/bin/env bb" "#!${pkgs.babashka}/bin/bb"
         chmod +x $out/bin/bm
+        cp -r src $out/bin/src
       '';
 
       dockerImage = buildImage {
