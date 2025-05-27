@@ -81,6 +81,76 @@
         opts {:date (str "\\\"" (:date args) "\\\"")}]
     (execute-clojure f opts)))
 
+(def build-configuration
+  {:command     "build"
+   :short       "b"
+   :description "Not used"
+   :opts        [{:option "file-a"
+                  :type   :string}
+                 {:option "file-b"
+                  :type   :string}]
+   :runs        -main})
+
+(def clerk-configuration
+  {:command     "clerk"
+   :description "notebooks"
+   :subcommands
+   [{:command     "start"
+     :description "Start the server"
+     :opts
+     [{:option      "clerk-port"
+       :description "Port to serve clerk notebooks on"
+       :type        :int
+       :default     default-clerk-port}
+      {:option      "nrepl-port"
+       :description "Port to serve nRepl server on"
+       :type        :int
+       :default     default-nrepl-port}]
+     :runs        start-clerk}]})
+
+(def convert-configuration
+  {:command     "convert"
+   :short       "c"
+   :description "Convert backup js to jsonl"
+   :opts        [{:option "in"
+                  :short  "0"
+                  :type   :string}]
+   :runs        convert-command})
+
+(def merge-configuration
+  {:command     "merge"
+   :short       "m"
+   :description "merge backup files"
+   :subcommands
+   [{:command     "js"
+     :description "merge js backup"
+     :opts        [{:option "file-a"
+                    :type   :string}
+                   {:option "file-b"
+                    :type   :string}]
+     :runs        merge-files}
+    {:command     "jsonl"
+     :description "merge jsonl backups"
+     :runs        merge-jsonl}]})
+
+(def org-configuration
+  {:command     "org"
+   :description "org files"
+   :short       "o"
+   :subcommands [{:command "fetch"
+                  :description "Fetch a daily file"
+                  :opts        [{:option "date"
+                                 :type   :string}]
+                  :runs        fetch-org-file}
+                 {:command     "list-daily"
+                  :description "list daily org files"
+                  :runs        list-daily-org-files}
+                 {:command     "parse"
+                  :description "parse org file by date"
+                  :opts        [{:option "date"
+                                 :type   :string}]
+                  :runs        parse-org-file}]})
+
 #_{:clj-kondo/ignore [:clojure-lsp/unused-public-var]}
 (def CONFIGURATION
   {:app
@@ -89,63 +159,8 @@
     :version     "0.0.1"}
    :global-opts []
    :commands
-   [{:command     "build"
-     :short       "b"
-     :description "Not used"
-     :opts        [{:option "file-a"
-                    :type   :string}
-                   {:option "file-b"
-                    :type   :string}]
-     :runs        -main}
-    {:command     "clerk"
-     :description "notebooks"
-     :subcommands
-     [{:command     "start"
-       :description "Start the server"
-       :opts
-       [{:option      "clerk-port"
-         :description "Port to serve clerk notebooks on"
-         :type        :int
-         :default     default-clerk-port}
-        {:option      "nrepl-port"
-         :description "Port to serve nRepl server on"
-         :type        :int
-         :default     default-nrepl-port}]
-       :runs        start-clerk}]}
-    {:command     "convert"
-     :short       "c"
-     :description "Convert backup js to jsonl"
-     :opts        [{:option "in"
-                    :short  "0"
-                    :type   :string}]
-     :runs        convert-command}
-    {:command     "merge"
-     :short       "m"
-     :description "merge backup files"
-     :subcommands
-     [{:command     "js"
-       :description "merge js backup"
-       :opts        [{:option "file-a"
-                      :type   :string}
-                     {:option "file-b"
-                      :type   :string}]
-       :runs        merge-files}
-      {:command     "jsonl"
-       :description "merge jsonl backups"
-       :runs        merge-jsonl}]}
-    {:command     "org"
-     :description "org files"
-     :short       "o"
-     :subcommands [{:command "fetch"
-                    :description "Fetch a daily file"
-                    :opts        [{:option "date"
-                                   :type   :string}]
-                    :runs        fetch-org-file}
-                   {:command     "list-daily"
-                    :description "list daily org files"
-                    :runs        list-daily-org-files}
-                   {:command     "parse"
-                    :description "parse org file by date"
-                    :opts        [{:option "date"
-                                   :type   :string}]
-                    :runs        parse-org-file}]}]})
+   [build-configuration
+    clerk-configuration
+    convert-configuration
+    merge-configuration
+    org-configuration]})
