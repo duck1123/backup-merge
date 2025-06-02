@@ -28,12 +28,14 @@
     nixpkgs.url = "nixpkgs/nixos-unstable";
   };
 
-  outputs = inputs@{ clj-nix, flake-parts, make-shell, nixpkgs, self, ... }:
+  outputs = inputs@{ clj-nix, flake-parts, make-shell, nixpkgs, ... }:
     let
       system = "x86_64-linux";
       pkgs = import nixpkgs { inherit system; };
       inherit (clj-nix.lib) mkCljApp;
       inherit (clj-nix.packages.${system}) mk-deps-cache;
+      inherit (flake-parts.lib) mkFlake;
+      inherit (pkgs) buildEnv runCommand;
       inherit (pkgs.dockerTools) buildImage;
       projectSrc = ./.;
 
@@ -49,7 +51,7 @@
         }];
       };
 
-      bm = pkgs.runCommand "bm" {
+      bm = runCommand "bm" {
         nativeBuildInputs = [ deps-cache pkgs.babashka pkgs.git pkgs.tree ];
       } ''
         mkdir -p $TMPDIR/cpcache
@@ -64,10 +66,10 @@
         cp -r src $out/bin/src
       '';
 
-      dockerImage = buildImage {
+      docker = buildImage {
         name = "backup-merge";
         tag = "latest";
-        copyToRoot = clj-nix.pkgs.buildEnv {
+        copyToRoot = buildEnv {
           name = "clojure-app-env";
           paths = with pkgs; [ bash coreutils nushell openjdk backup-merge ];
         };
@@ -77,7 +79,7 @@
           WorkinDir = "/app";
         };
       };
-    in flake-parts.lib.mkFlake { inherit inputs; } (_: {
+    in mkFlake { inherit inputs; } (_: {
       imports = [ make-shell.flakeModules.default ];
       systems = [ system ];
 
@@ -96,7 +98,7 @@
         };
 
         packages = {
-          inherit bm deps-cache dockerImage;
+          inherit deps-cache docker;
           default = bm;
         };
       };
