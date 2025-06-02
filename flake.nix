@@ -56,14 +56,20 @@
       } ''
         mkdir -p $TMPDIR/cpcache
         mkdir -p $out/bin
+        mkdir -p $out/lib
         export CLJ_CACHE=$TMPDIR/cpcache
         export HOME=${deps-cache}
         export JAVA_TOOL_OPTIONS="-Duser.home=${deps-cache}"
         cd ${projectSrc}
-        substitute ./bm $out/bin/bm \
-          --replace-fail "#!/usr/bin/env bb" "#!${pkgs.babashka}/bin/bb"
-        chmod +x $out/bin/bm
-        cp -r src $out/bin/src
+
+        cp bb.edn deps.edn $out/lib
+        cp -r src $out/lib/src
+
+        substitute ./bm $out/lib/bm \
+          --replace-fail "#!/usr/bin/env bb" "#!${pkgs.babashka}/bin/bb --debug"
+        chmod +x $out/lib/bm
+
+        ln -s $out/lib/bm $out/bin/bm
       '';
 
       docker = buildImage {
