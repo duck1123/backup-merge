@@ -5,6 +5,7 @@
 [Notebooks](http://localhost:7777/)
 
 ```sh {"name": "start-clerk"}
+# bb server
 ./bm clerk start
 ```
 

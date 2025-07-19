@@ -43,6 +43,10 @@
   {:doc     "Check all code issues"
    :depends [check validate]}
 
+  server
+  {:doc  "Run clerk server"
+   :task (shell "./bm clerk start")}
+
   test
   {:task (shell "true")}
 
