@@ -104,7 +104,7 @@
         };
 
         packages = {
-          inherit deps-cache docker;
+          inherit bm deps-cache docker;
           default = bm;
         };
       };

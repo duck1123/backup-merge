@@ -375,7 +375,7 @@
   (let [file (get args '--file)]
 
     (let [response {:file file}]
-     (println response))))
+      (println response))))
 
 (defn -main
   [& args1]
